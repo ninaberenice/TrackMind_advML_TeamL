@@ -207,7 +207,7 @@ _TSI_ARTICLE_SPLIT_RE = re.compile(
     r'(?=\nArticle\s+\d+\b)'
 )
 
-_TSI_SECTION_ID_RE = re.compile(r'^(\d+\.\d+[\.\d]*)\.?\s')
+_TSI_SECTION_ID_RE = re.compile(r'^([1-7](?:\.\d{1,2})+)\.?\s')
 _TSI_ARTICLE_ID_RE = re.compile(r'^(Article\s+\d+)', re.IGNORECASE)
 
 
@@ -250,7 +250,7 @@ def chunk_tsi_loc_pas(pdf_path: str, doc_type: str = 'TSI_LOC_PAS') -> list[dict
     clean = _strip_tsi_noise(raw_text)
 
     combined_pattern = re.compile(
-        r'(?=\n\d+\.\d+[\.\d]*\.?\s+[A-Z])'
+        r'(?=\n[1-7](?:\.\d{1,2})+\.?\s+[A-Z])'
         r'|(?=\nArticle\s+\d+\b)'
     )
     raw_chunks = combined_pattern.split(clean)
@@ -265,7 +265,7 @@ def chunk_tsi_loc_pas(pdf_path: str, doc_type: str = 'TSI_LOC_PAS') -> list[dict
         art_match = _TSI_ARTICLE_ID_RE.match(piece)
 
         if sec_match:
-            article_id = sec_match.group(1)
+            article_id = sec_match.group(1).rstrip(".")
         elif art_match:
             article_id = art_match.group(1)
         else:
