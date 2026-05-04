@@ -36,6 +36,7 @@
   html { scroll-behavior: smooth; }
   body {
     margin: 0;
+    zoom: 1.10;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     color: var(--foreground);
     background: var(--background);
@@ -52,7 +53,7 @@
   input { font-family: inherit; }
   ::selection { background: rgba(76,175,59,.25); }
 
-  .container { max-width: 1152px; margin: 0 auto; padding: 0 24px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
   .text-gradient { background: var(--gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .text-gradient-accent { background: var(--gradient-accent); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .grid-bg {
@@ -163,7 +164,22 @@
   .brain-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
   .brain-line { display: none; width: 64px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); }
   @media (min-width: 768px) { .brain-line { display: block; } }
-  .brain-box { display: grid; place-items: center; width: 80px; height: 80px; background: var(--primary); color: #fff; border-radius: 20px; box-shadow: var(--shadow-glow); animation: pulse-glow 4s ease-in-out infinite; }
+  .brain-box {
+    display: grid;
+    place-items: center;
+    width: 80px;
+    height: 80px;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 20px;
+    box-shadow: var(--shadow-glow);
+    animation: pulse-glow 4s ease-in-out infinite;
+  }
+
+  .brain-box svg {
+    width: 36px;
+    height: 36px;
+  }  
   .brain-box svg { width: 36px; height: 36px; }
   @keyframes pulse-glow { 0%,100% { transform: scale(1); opacity: .92; } 50% { transform: scale(1.04); opacity: 1; } }
   .brain-label { font-size: 12px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--muted-foreground); }
@@ -362,7 +378,10 @@
   <symbol id="i-timer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4M12 14l3-3M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
   <symbol id="i-file-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><circle cx="11.5" cy="14.5" r="2.5"/><path d="M13.3 16.3 15 18"/></symbol>
-  <symbol id="i-brain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-1.04Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-1.04Z"/></symbol>
+  <symbol id="i-brain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-1.04Z"/>
+    <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-1.04Z"/>
+  </symbol>
   <symbol id="i-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
   <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
@@ -400,8 +419,7 @@
   <div class="container">
     <div class="badge-pill anim-fade-in"><span class="ping-dot"></span>Built for EU railway certification</div>
     <h1 class="hero-title text-gradient anim-fade-in-slow">AI that reads railway regulations <span class="text-gradient-accent">across languages.</span></h1>
-    <p class="hero-sub anim-fade-in delay-200">From 6-hour compliance searches to 20 minutes. TrackMind AI reads TSI, national rules and manufacturer specs simultaneously, giving you cited, confidence-scored verdicts in any language.</p>
-    <div class="hero-ctas anim-fade-in delay-350">
+    <p class="hero-sub anim-fade-in delay-200">Cross-border certification costs your engineers 600 hours per project. We find every regulatory conflict in 20 minutes, in any language.</p>    <div class="hero-ctas anim-fade-in delay-350">
       <a href="#demo" class="btn btn-primary">See demo</a>      
       <a href="#solution" class="btn btn-outline">How it works</a>
     </div>
@@ -425,8 +443,7 @@
     <div class="sec-header">
       <p class="eyebrow">The problem</p>
       <h2 class="sec-title text-gradient">Compliance is broken.</h2>
-      <p class="sec-sub">Railway certification still runs on PDFs, post-its and patience. It's slow, expensive and error-prone.</p>
-    </div>
+      <p class="sec-sub">Every cross-border certification means reconciling EU regulations with national rules in languages your engineers don't speak. 4–6 hours per question. €800–2,400 per query. Every project.</p>    </div>
     <div class="grid grid-4">
       <div class="card"><div class="card-icon"><svg><use href="#i-files"/></svg></div><h3 class="card-title">300–800 requirements</h3><p class="card-desc">TSI LOC&amp;PAS alone runs 300+ pages. Each cross-border project adds national rules on top in the local language.</p></div>
       <div class="card"><div class="card-icon"><svg><use href="#i-languages"/></svg></div><h3 class="card-title">24 EU languages</h3><p class="card-desc">National rules exist in 24 EU languages across 27 member states, each referencing different national standards.</p></div>
@@ -442,14 +459,13 @@
     <div class="sec-header">
       <p class="eyebrow">The solution</p>
       <h2 class="sec-title text-gradient">One AI. Every regulation.</h2>
-      <p class="sec-sub">TrackMind AI ingests TSI, national rules in their original language, and manufacturer specs answering certification questions with citations you can defend before a NoBo assessor.</p>
-    </div>
+      <p class="sec-sub">TrackMind comes pre-loaded with TSI regulations and national rules across all EU member states. Upload your technical specification and we find every conflict before the NoBo does.</p>    </div>
     <div class="solution">
       <div class="solution-grid">
         <div>
-          <div class="input-row"><div class="icon"><svg><use href="#i-file-search"/></svg></div><div><div class="lab">LOC&amp;PAS TSI</div><div class="sub">English · EU regulation</div></div></div>
-          <div class="input-row"><div class="icon"><svg><use href="#i-file-search"/></svg></div><div><div class="lab">Arrêté 19 mars 2012</div><div class="sub">French · national rule</div></div></div>
-          <div class="input-row"><div class="icon"><svg><use href="#i-file-search"/></svg></div><div><div class="lab">IberRail IB-EMU-450 Spec</div><div class="sub">English · manufacturer doc</div></div></div>
+          <div class="input-row"><div class="icon"><svg><use href="#i-file-search"/></svg></div><div><div class="lab">EU TSI Regulations</div><div class="sub">English · all subsystems · pre-loaded</div></div></div>          
+          <div class="input-row"><div class="icon"><svg><use href="#i-file-search"/></svg></div><div><div class="lab">National Rules</div><div class="sub">24 EU languages · all member states · pre-loaded</div></div></div>          
+          <div class="input-row"><div class="icon"><svg><use href="#i-file-search"/></svg></div><div><div class="lab">Your Technical Specification</div><div class="sub">Any language · your document · uploaded by you</div></div></div>
         </div>
         <div class="brain-wrap">
           <div class="brain-line"></div>
@@ -458,12 +474,12 @@
         </div>
         <div>
           <div class="qa-box">
-            <div class="label"><svg><use href="#i-message"/></svg> Query in English</div>
-            <p>"Does IberRail's door obstacle detection satisfy Arrêté 2012 Article 49?"</p>
+            <div class="label"><svg><use href="#i-message"/></svg> Your compliance question</div>
+            <p>Ask in any language about any TSI requirement, national rule, or conflict between them.</p>
           </div>
           <div class="qa-box accent">
-            <div class="label"><svg><use href="#i-sparkles"/></svg> CONFLICT DETECTED · GREEN 92%</div>
-            <p>TSI Art. 4.2.3.1 → EN 14752 (single position). Arrêté Art. 49 via NF F31-054 → 5 height positions, 1.5 J kinetic limit. Existing FAT insufficient for French RFN authorisation.</p>
+            <div class="label"><svg><use href="#i-sparkles"/></svg> Cited verdict with confidence score</div>
+            <p>TrackMind returns a structured compliance position with article citations, confidence tier, and recommended action ready for NoBo assessor review.</p>
           </div>
         </div>
       </div>
@@ -636,7 +652,7 @@
     </div>
     <div class="grid grid-2">
       <div class="card moat-card"><div class="icon"><svg><use href="#i-zap"/></svg></div><div><h3>Zero competitors confirmed</h3><p>Validated across 403 AI railway startups. Every AI investment in rail goes to track inspection and predictive maintenance. Nobody is touching the document intelligence layer.</p></div></div>
-      <div class="card moat-card"><div class="icon"><svg><use href="#i-languages"/></svg></div><div><h3>bge-m3 cross-lingual retrieval</h3><p>English query retrieves French national rules at full semantic fidelity. No translation layer, no bilingual specialists. 24 EU languages. Structural technical barrier, not a feature.</p></div></div>
+      <div class="card moat-card"><div class="icon"><svg><use href="#i-languages"/></svg></div><div><h3>bge-m3 cross-lingual retrieval</h3><p>An English query retrieves national rules in any EU language at full semantic fidelity. No translation layer, no bilingual specialists. 24 languages. Structural technical barrier, not a feature.</p></div></div>
       <div class="card moat-card"><div class="icon"><svg><use href="#i-lock"/></svg></div><div><h3>18-month minimum rebuild time</h3><p>EU regulatory complexity, 27 national rule sets in 24 languages, and NoBo customer relationships. Too niche for a platform company, too regulated for a US startup.</p></div></div>
       <div class="card moat-card"><div class="icon"><svg><use href="#i-check"/></svg></div><div><h3>Human signs every verdict</h3><p>RED tier refuses to draft and escalates. For GREEN tier drafts, a NoBo assessor reviews in 10 minutes and approves with professional seal. AI accelerates; it does not replace.</p></div></div>
     </div>
@@ -649,8 +665,7 @@
     <div class="cta-box">
       <div class="content">
         <img src="logo_images/trackmind_logo_white.png" class="cta-logo" style="object-fit:contain;">        <h2 class="cta-title">Start using <span class="green">TrackMind AI</span>.</h2>
-        <p class="cta-sub">Cut weeks off your next certification cycle. The answer is in a French document, we find it in 20 minutes.</p>
-        <div class="cta-ctas">
+        <p class="cta-sub">Zero competitors. 83% cost reduction. €150k saved per certification project. TrackMind gives your engineers their time back.</p>        <div class="cta-ctas">
           <a href="#demo" class="btn btn-accent">Try the demo</a>        
         </div>
       </div>
