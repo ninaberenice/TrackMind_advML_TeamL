@@ -260,9 +260,9 @@ def audit_stats():
 def root():
     return FileResponse("index.html")
 
-@app.get("/{filename}")
-def static_file(filename: str):
+@app.get("/{filepath:path}")
+def static_file(filepath: str):
     """Serve static files (logo, etc.) from the same directory."""
-    if os.path.isfile(filename) and not filename.startswith("."):
-        return FileResponse(filename)
+    if os.path.isfile(filepath) and not filepath.startswith("."):
+        return FileResponse(filepath)
     raise HTTPException(status_code=404, detail="Not found")
