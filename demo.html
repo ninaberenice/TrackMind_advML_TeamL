@@ -1,0 +1,985 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TrackMind AI — Live Demo</title>
+<meta name="description" content="Try TrackMind AI: upload a technical spec, ask in any language, get a cited compliance verdict." />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --background: #f7f9fb;
+    --foreground: #0c1a33;
+    --card: #ffffff;
+    --muted: #eef1f5;
+    --muted-foreground: #5a6679;
+    --border: #dde3ec;
+    --primary: #0e2547;
+    --primary-foreground: #ffffff;
+    --accent: #4caf3b;
+    --accent-foreground: #ffffff;
+    --secondary: #eef1f5;
+    --warning: #f5a524;
+    --danger: #e0473e;
+    --success: #4caf3b;
+    --radius: 16px;
+    --gradient-text: linear-gradient(180deg, #0e2547, #2b4a78);
+    --gradient-accent: linear-gradient(135deg, #0e2547, #4caf3b);
+    --shadow-sm: 0 1px 2px rgba(14,37,71,.06);
+    --shadow-card: 0 20px 50px -20px rgba(14,37,71,.18), 0 0 0 1px rgba(14,37,71,.04);
+    --shadow-elevated: 0 40px 80px -20px rgba(14,37,71,.25);
+    --shadow-glow: 0 0 80px rgba(76,175,59,.25);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--foreground); background: var(--background);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(76,175,59,.10), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 5%, rgba(14,37,71,.08), transparent 60%);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased; line-height: 1.5;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  input, textarea { font-family: inherit; }
+  ::selection { background: rgba(76,175,59,.25); }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+  .text-gradient { background: var(--gradient-text); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .text-gradient-accent { background: var(--gradient-accent); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 44px; padding: 0 22px; border-radius: 999px; font-size: 14px; font-weight: 500; transition: .2s ease; }
+  .btn-sm { height: 34px; padding: 0 14px; font-size: 13px; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: #163366; transform: translateY(-1px); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: #43a033; transform: translateY(-1px); }
+  .btn-outline { background: var(--card); color: var(--foreground); border: 1px solid var(--border); }
+  .btn-outline:hover { background: var(--secondary); }
+  .btn-danger { background: #fff; color: var(--danger); border: 1px solid rgba(224,71,62,.3); }
+  .btn-danger:hover { background: rgba(224,71,62,.08); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .btn svg { width: 16px; height: 16px; }
+
+  /* Nav */
+  header.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; }
+  .nav-inner {
+    margin: 16px auto 0; max-width: 1152px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    background: rgba(247,249,251,.78);
+    border: 1px solid var(--border); border-radius: 999px;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-sm);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-logo { width: 36px; height: 36px; }
+  .brand-text { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand-text .green { color: var(--accent); }
+  .nav-links { display: none; gap: 32px; font-size: 14px; color: var(--muted-foreground); }
+  .nav-links a { transition: color .2s; }
+  .nav-links a:hover { color: var(--foreground); }
+  .nav-status { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; }
+  .status-live { background: rgba(76,175,59,.12); color: var(--accent); }
+  .status-mock { background: rgba(245,165,36,.12); color: var(--warning); }
+  .status-down { background: rgba(224,71,62,.12); color: var(--danger); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+  .nav-status { cursor: pointer; border: none; font-family: inherit; transition: opacity .2s; }
+  .nav-status.inactive { opacity: .4; }
+  @media (min-width: 768px) { .nav-links { display: flex; } }
+
+  /* Page */
+  main { padding: 128px 0 64px; }
+  .page-head { max-width: 760px; margin: 0 auto 48px; text-align: center; }
+  .eyebrow { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .25em; color: var(--accent); margin: 0 0 16px; }
+  .page-title { font-size: clamp(32px, 5vw, 56px); font-weight: 600; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+  .page-sub { margin: 18px auto 0; max-width: 600px; font-size: 17px; color: var(--muted-foreground); }
+
+  /* Steps */
+  .step { background: var(--card); border: 1px solid var(--border); border-radius: 24px;
+    box-shadow: var(--shadow-card); padding: 32px; margin-bottom: 24px; }
+  @media (min-width: 768px) { .step { padding: 40px; } }
+  .step-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .step-num { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 999px;
+    background: var(--primary); color: #fff; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+  .step-num.done { background: var(--accent); }
+  .step-title { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .step-desc { margin: 4px 0 0; font-size: 13px; color: var(--muted-foreground); }
+
+  /* Step 1: Upload */
+  .dropzone {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; padding: 48px 24px; text-align: center;
+    border: 2px dashed var(--border); border-radius: 16px; background: rgba(238,241,245,.4);
+    transition: .2s ease; cursor: pointer;
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: rgba(76,175,59,.06); }
+  .dropzone svg { width: 32px; height: 32px; color: var(--muted-foreground); }
+  .dropzone p { margin: 0; font-size: 14px; color: var(--muted-foreground); }
+  .dropzone strong { color: var(--foreground); font-weight: 600; }
+  .dz-hint { font-size: 12px; color: var(--muted-foreground); }
+  .uploaded {
+    display: none; align-items: center; gap: 12px; padding: 16px 20px; border-radius: 12px;
+    background: rgba(76,175,59,.08); border: 1px solid rgba(76,175,59,.3);
+  }
+  .uploaded.active { display: flex; }
+  .uploaded .check { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent); color: #fff; flex-shrink: 0; }
+  .uploaded .check svg { width: 16px; height: 16px; }
+  .uploaded .file-name { font-size: 14px; font-weight: 600; flex: 1; }
+  .uploaded .file-size { font-size: 12px; color: var(--muted-foreground); }
+  .uploaded .remove { color: var(--muted-foreground); padding: 4px; }
+  .uploaded .remove svg { width: 16px; height: 16px; }
+
+  .preloaded { margin-top: 20px; }
+  .preloaded-lab { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .2em;
+    color: var(--muted-foreground); margin: 0 0 12px; }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; border-radius: 999px; font-size: 13px;
+    background: rgba(14,37,71,.06); color: var(--primary); border: 1px solid rgba(14,37,71,.1);
+  }
+  .pill svg { width: 12px; height: 12px; }
+  .pill .lock { color: var(--muted-foreground); }
+
+  /* Step 2: Query */
+  .query-box {
+    width: 100%; min-height: 120px; padding: 20px; border-radius: 16px;
+    border: 1px solid var(--border); background: var(--background);
+    font-size: 16px; color: var(--foreground); outline: none; transition: .2s; resize: vertical;
+    line-height: 1.5;
+  }
+  .query-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(76,175,59,.18); }
+  .examples-row { margin: 16px 0 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .examples-row .lab { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .2em; color: var(--muted-foreground); margin-right: 4px; }
+  .chip {
+    border: 1px solid var(--border); background: rgba(238,241,245,.5);
+    padding: 6px 14px; border-radius: 999px; font-size: 13px; color: var(--muted-foreground);
+    transition: .2s;
+  }
+  .chip:hover { border-color: rgba(76,175,59,.4); background: rgba(76,175,59,.1); color: var(--foreground); }
+  .step-actions { display: flex; justify-content: flex-end; gap: 12px; }
+
+  /* Step 3: Results */
+  .results-grid { display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 1024px) { .results-grid { grid-template-columns: 1fr 1.1fr 1fr; } }
+
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+    box-shadow: var(--shadow-sm); padding: 24px; }
+  .panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .panel-head svg { width: 18px; height: 18px; color: var(--accent); }
+  .panel-title { margin: 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .15em; }
+
+  /* Results layout */
+  .results-grid-top { display: grid; gap: 20px; grid-template-columns: 1fr; margin-bottom: 20px; }
+  @media (min-width: 1024px) { .results-grid-top { grid-template-columns: 1fr 1fr; } }
+
+  .assessor-grid { display: grid; gap: 24px; grid-template-columns: 1fr; }
+  @media (min-width: 768px) { .assessor-grid { grid-template-columns: 1.2fr 1fr; } }
+
+  .source-group { margin-bottom: 16px; }
+  .source-group:last-child { margin-bottom: 0; }
+  .source-label { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .15em; color: var(--muted-foreground);
+    margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .source-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .source-dot.tsi { background: #0e2547; }
+  .source-dot.nntr { background: #f5a524; }
+  .source-dot.spec { background: #4caf3b; }
+
+  /* Document chunks */
+  .chunk {
+    border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
+    background: rgba(238,241,245,.4); transition: .2s ease;
+  }
+  .chunk summary { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    cursor: pointer; list-style: none; font-size: 13px; }
+  .chunk summary::-webkit-details-marker { display: none; }
+  .chunk-src { font-weight: 600; color: var(--foreground); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chunk-meta { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .lang-badge {
+    padding: 2px 8px; border-radius: 6px; font-family: ui-monospace, monospace; font-size: 11px;
+    background: var(--card); color: var(--muted-foreground); border: 1px solid var(--border);
+  }
+  .lang-badge.en { color: #2563eb; border-color: rgba(37,99,235,.3); background: rgba(37,99,235,.06); }
+  .lang-badge.fr { color: #7c3aed; border-color: rgba(124,58,237,.3); background: rgba(124,58,237,.06); }
+  .lang-badge.de { color: #ea580c; border-color: rgba(234,88,12,.3); background: rgba(234,88,12,.06); }
+  .lang-badge.it { color: #16a34a; border-color: rgba(22,163,74,.3); background: rgba(22,163,74,.06); }
+  .chunk-text { margin: 12px 0 0; font-size: 13px; color: rgba(12,26,51,.78); line-height: 1.6; padding-top: 12px; border-top: 1px solid var(--border); }
+  .chunk-score { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted-foreground); }
+  .chevron { width: 14px; height: 14px; transition: transform .2s; color: var(--muted-foreground); }
+  details[open] .chevron { transform: rotate(90deg); }
+
+  /* Verdict */
+  .verdict-pill {
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 999px;
+    font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    border: 1px solid currentColor;
+  }
+  .verdict-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+  .tier-badge {
+    display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .15em; color: #fff; margin-left: 8px;
+  }
+  .tier-green { background: var(--accent); }
+  .tier-amber { background: var(--warning); }
+  .tier-red { background: var(--danger); }
+
+  .verdict-pill.conflict { color: #e0473e; background: rgba(224,71,62,.08); }
+  .verdict-pill.compliant { color: #4caf3b; background: rgba(76,175,59,.08); }
+  .verdict-pill.insufficient { color: #888; background: rgba(136,136,136,.08); }
+
+  .verdict-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 18px; }
+  .conf-block { margin-bottom: 18px; }
+  .conf-head { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted-foreground); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .15em; font-weight: 600; }
+  .conf-bar-track { position: relative; height: 10px; border-radius: 999px;
+    background: linear-gradient(90deg, #e0473e 0%, #f5a524 50%, #4caf3b 100%); }
+  .conf-marker { position: absolute; top: 50%; transform: translate(-50%, -50%);
+    width: 16px; height: 16px; border-radius: 50%; background: white;
+    border: 3px solid var(--foreground); box-shadow: 0 1px 4px rgba(0,0,0,.2);
+    transition: left .8s ease; }
+
+  .field-block { margin-bottom: 16px; }
+  .field-lab { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .15em;
+    color: var(--muted-foreground); margin: 0 0 8px; }
+  .field-text { margin: 0; padding: 14px 16px; border-radius: 10px; background: rgba(238,241,245,.4);
+    border: 1px solid var(--border); font-size: 13px; line-height: 1.6; color: rgba(12,26,51,.85); }
+
+  .citation-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  .citation-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 14px; border-radius: 8px; background: rgba(238,241,245,.4);
+    border: 1px solid var(--border); font-size: 13px; }
+  .citation-list .src { font-weight: 500; }
+
+  details.raw { margin-top: 16px; border: 1px solid var(--border); border-radius: 10px; }
+  details.raw summary { padding: 10px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+    color: var(--muted-foreground); list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  details.raw summary::-webkit-details-marker { display: none; }
+  details.raw pre { margin: 0; padding: 14px; font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 11px; line-height: 1.5; background: rgba(14,37,71,.04); color: rgba(12,26,51,.8);
+    border-top: 1px solid var(--border); border-radius: 0 0 10px 10px;
+    max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+
+  /* Assessor */
+  .review-textarea {
+    width: 100%; min-height: 90px; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--background);
+    font-size: 13px; line-height: 1.5; color: var(--foreground); outline: none; transition: .2s; resize: vertical;
+  }
+  .review-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(76,175,59,.18); }
+  .review-actions { display: flex; gap: 10px; margin: 16px 0; }
+  .review-actions .btn { flex: 1; }
+
+  .audit-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+  .stat { text-align: center; padding: 12px 8px; border-radius: 10px; background: rgba(238,241,245,.5); border: 1px solid var(--border); }
+  .stat-num { display: block; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+  .stat-num.ok { color: var(--accent); }
+  .stat-num.warn { color: var(--warning); }
+  .stat-num.bad { color: var(--danger); }
+  .stat-lab { display: block; margin-top: 2px; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted-foreground); font-weight: 600; }
+
+  .audit-log { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow: auto; }
+  .audit-log li { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 12px;
+    border-bottom: 1px dashed var(--border); }
+  .audit-log li:last-child { border-bottom: none; }
+  .audit-log .audit-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .audit-dot.green { background: var(--accent); }
+  .audit-dot.red { background: var(--danger); }
+  .audit-dot.amber { background: var(--warning); }
+  .audit-q { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground); }
+  .audit-time { font-family: ui-monospace, monospace; color: var(--muted-foreground); flex-shrink: 0; }
+
+  /* Loading state in results */
+  .results-loading { display: none; align-items: center; gap: 12px; padding: 24px; border: 1px solid var(--border);
+    border-radius: 16px; background: rgba(238,241,245,.4); margin-bottom: 24px; font-size: 14px; color: var(--muted-foreground); }
+  .results-loading.active { display: flex; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .results-section { display: none; animation: fade-in .5s ease; }
+  .results-section.active { display: block; }
+  @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  .empty-state { padding: 48px 24px; text-align: center; color: var(--muted-foreground); font-size: 14px; }
+  .empty-state svg { width: 36px; height: 36px; margin: 0 auto 12px; opacity: .4; display: block; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 100;
+    padding: 14px 20px; border-radius: 12px; background: var(--primary); color: #fff;
+    box-shadow: var(--shadow-elevated); font-size: 14px; font-weight: 500;
+    transform: translateY(100px); opacity: 0; transition: .3s ease; pointer-events: none;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--accent); }
+  .toast.error { background: var(--danger); }
+  .toast svg { width: 16px; height: 16px; }
+
+  /* Footer */
+  footer { padding: 64px 0 32px; border-top: 1px solid var(--border); margin-top: 64px; }
+  .footer-row { display: flex; flex-direction: column; gap: 24px; align-items: center; justify-content: space-between; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+  @media (min-width: 768px) { .footer-row { flex-direction: row; } }
+  .footer-links { display: flex; flex-wrap: wrap; gap: 24px; font-size: 14px; color: var(--muted-foreground); }
+  .footer-links a:hover { color: var(--foreground); }
+  .footer-meta { display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: space-between; padding-top: 32px; font-size: 12px; color: var(--muted-foreground); }
+  @media (min-width: 768px) { .footer-meta { flex-direction: row; } }
+</style>
+</head>
+<body>
+
+<!-- ============ Inline icon library ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="logo-trackmind" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="46" fill="#0e2547"/>
+      <path d="M50 22 C36 22 26 33 26 47 c0 8 4 15 11 19 v8 a4 4 0 0 0 4 4 h18 a4 4 0 0 0 4 -4 v-8 c7-4 11-11 11-19 C74 33 64 22 50 22 z" fill="#4caf3b"/>
+      <path d="M38 46 c4-2 8-2 12 0 m0 0 c4-2 8-2 12 0 M44 56 h12" stroke="#0e2547" stroke-width="3" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+    <symbol id="i-thumbs-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-6 0v4H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12.5a2 2 0 0 0 2-1.7l1.4-8a2 2 0 0 0-2-2.3z"/></symbol>
+    <symbol id="i-thumbs-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 6 0v-4h3a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H6.5a2 2 0 0 0-2 1.7l-1.4 8A2 2 0 0 0 5 15z"/></symbol>
+    <symbol id="i-github" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5 3.3 9.3 7.9 10.8.6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.5-3.9-1.5-.5-1.4-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.2 1.2.9-.3 1.9-.4 2.9-.4s2 .1 2.9.4c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.9.1 3.2.7.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.8C23.5 5.7 18.3.5 12 .5z"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============ NAV ============ -->
+<header class="nav">
+  <div class="nav-inner">
+    <a href="index.html" class="brand">
+      <img src="logo_images/trackmind_logo2.png" class="brand-logo" style="object-fit:contain; height:36px; width:auto;">
+    </a>
+    <nav class="nav-links">
+      <a href="index.html#problem">Problem</a>
+      <a href="index.html#solution">Solution</a>
+      <a href="index.html#impact">Impact</a>
+      <a href="index.html#moat">Why Us</a>
+      <button id="btn-live" class="nav-status status-live" onclick="setMode('live')"><span class="status-dot"></span> Live Demo</button>
+      <button id="btn-mock" class="nav-status status-mock" onclick="setMode('mock')"><span class="status-dot"></span> Mock Mode</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ============ MAIN ============ -->
+<main>
+  <div class="container">
+    <div class="page-head">
+      <p class="eyebrow">Live Demo</p>
+      <h1 class="page-title text-gradient">Run a real compliance check.</h1>
+      <p class="page-sub">Upload your spec, ask in any language, get a cited verdict — in three steps.</p>
+    </div>
+
+    <!-- ============ STEP 1: UPLOAD ============ -->
+    <section class="step" id="step-1">
+      <div class="step-head">
+        <div class="step-num" id="step1-num">1</div>
+        <div>
+          <h2 class="step-title">Upload your technical specification</h2>
+          <p class="step-desc">PDF, up to 50 MB. Stays on your environment.</p>
+        </div>
+      </div>
+
+      <div class="dropzone" id="dropzone">
+        <svg><use href="#i-upload"/></svg>
+        <p><strong>Drag & drop</strong> your PDF here, or <strong style="color: var(--accent)">browse</strong></p>
+        <p class="dz-hint">PDF only · max 50 MB</p>
+        <input type="file" id="file-input" accept="application/pdf" style="display:none"/>
+      </div>
+
+      <div class="uploaded" id="uploaded">
+        <div class="check"><svg><use href="#i-check"/></svg></div>
+        <div style="flex:1; min-width:0">
+          <div class="file-name" id="file-name"></div>
+          <div class="file-size" id="file-size"></div>
+        </div>
+        <button class="remove" id="file-remove" title="Remove">
+          <svg><use href="#i-x"/></svg>
+        </button>
+      </div>
+
+      <div class="preloaded">
+        <p class="preloaded-lab">Pre-loaded knowledge base</p>
+        <div class="pill-row">
+          <span class="pill"><svg class="lock"><use href="#i-lock"/></svg> EU TSI Regulations · pre-loaded</span>
+          <span class="pill"><svg class="lock"><use href="#i-lock"/></svg> National Rules · 24 EU languages · pre-loaded</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ STEP 2: QUERY ============ -->
+    <section class="step" id="step-2">
+      <div class="step-head">
+        <div class="step-num">2</div>
+        <div>
+          <h2 class="step-title">Ask your compliance question</h2>
+          <p class="step-desc">Press <kbd style="font-family:ui-monospace,monospace; font-size:11px; padding:1px 6px; border:1px solid var(--border); border-radius:4px; background:var(--secondary)">Enter</kbd> to analyse.</p>
+        </div>
+      </div>
+
+      <textarea id="query" class="query-box"
+        placeholder="Ask in any language about any TSI requirement, national rule, or conflict between them."></textarea>
+
+      <div class="examples-row">
+        <span class="lab">Examples:</span>
+        <button class="chip" data-q="Does the door closing-force comply with French SNCF rules under TSI LOC&PAS?">Door system · French rules</button>
+        <button class="chip" data-q="Is a 1.6s brake response time compliant on German DB lines per TSI CCS?">Brake response · German DB</button>
+        <button class="chip" data-q="Can a pantograph with 1450mm head geometry operate on Italian RFI 3kV DC lines?">Pantograph · Italian 3kV DC</button>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-outline" id="clear-btn">Clear</button>
+        <button class="btn btn-primary" id="analyse-btn" disabled>
+          Analyse <svg><use href="#i-sparkles"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 3: RESULTS ============ -->
+    <section class="step" id="step-3">
+      <div class="step-head">
+        <div class="step-num">3</div>
+        <div>
+          <h2 class="step-title">Results</h2>
+          <p class="step-desc">Document context · Verdict · Assessor review.</p>
+        </div>
+      </div>
+
+      <div class="results-loading" id="results-loading">
+        <div class="spinner"></div>
+        <span>Retrieving across TSI, national rules and your spec…</span>
+      </div>
+
+      <div class="empty-state" id="results-empty">
+        <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Run an analysis to see the results.
+      </div>
+
+      <div class="results-section" id="results">
+        <div class="results-grid-top">
+          <div class="panel">
+            <div class="panel-head">
+              <svg><use href="#i-file"/></svg>
+              <h3 class="panel-title">Document context</h3>
+            </div>
+            <div class="source-group">
+              <div class="source-label"><span class="source-dot tsi"></span>EU TSI Regulations</div>
+              <div id="chunks-tsi-inner"></div>
+            </div>
+            <div class="source-group">
+              <div class="source-label"><span class="source-dot nntr"></span>National Rules</div>
+              <div id="chunks-nntr-inner"></div>
+            </div>
+            <div class="source-group">
+              <div class="source-label"><span class="source-dot spec"></span>Your Technical Specification</div>
+              <div id="chunks-spec-inner"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <svg><use href="#i-scale"/></svg>
+              <h3 class="panel-title">Verdict</h3>
+            </div>
+            <div class="verdict-row">
+              <span id="verdict-pill" class="verdict-pill"><span class="dot"></span><span id="verdict-label"></span></span>
+            </div>
+            <div class="conf-block">
+              <div class="conf-head"><span>Confidence</span><span id="conf-num">—</span></div>
+              <div class="conf-bar-track">
+                <div id="conf-marker" class="conf-marker"></div>
+              </div>
+            </div>
+            <div class="field-block">
+              <p class="field-lab">Explanation</p>
+              <p class="field-text" id="explanation"></p>
+            </div>
+            <div class="field-block">
+              <p class="field-lab">Recommended action</p>
+              <p class="field-text" id="action"></p>
+            </div>
+            <details class="raw">
+              <summary><span>Raw LLM output — GenAI Transparency Log</span><svg class="chevron"><use href="#i-chevron-right"/></svg></summary>
+              <pre id="raw-output"></pre>
+            </details>
+          </div>
+        </div>
+
+        <div class="panel assessor-panel">
+          <div class="panel-head">
+            <svg><use href="#i-shield"/></svg>
+            <h3 class="panel-title">Assessor review</h3>
+          </div>
+          <div class="assessor-grid">
+            <div>
+              <div class="field-block">
+                <p class="field-lab">Edit explanation</p>
+                <textarea id="review-explanation" class="review-textarea"></textarea>
+              </div>
+              <div class="field-block">
+                <p class="field-lab">Edit recommended action</p>
+                <textarea id="review-action" class="review-textarea"></textarea>
+              </div>
+              <div class="review-actions">
+                <button class="btn btn-accent" id="approve-btn"><svg><use href="#i-thumbs-up"/></svg> Approve</button>
+                <button class="btn btn-danger" id="reject-btn"><svg><use href="#i-thumbs-down"/></svg> Reject</button>
+              </div>
+            </div>
+            <div>
+              <p class="field-lab">Audit stats</p>
+              <div class="audit-stats">
+                <div class="stat"><span class="stat-num ok" id="stat-approved">0</span><span class="stat-lab">Approved</span></div>
+                <div class="stat"><span class="stat-num bad" id="stat-rejected">0</span><span class="stat-lab">Rejected</span></div>
+                <div class="stat"><span class="stat-num warn" id="stat-pending">0</span><span class="stat-lab">Pending</span></div>
+              </div>
+              <p class="field-lab" style="margin-top:16px">Recent audit log</p>
+              <ul class="audit-log" id="audit-log">
+                <li style="color:var(--muted-foreground); font-style:italic; border:none">No entries yet.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="container">
+    <div class="footer-row">
+      <a href="index.html" class="brand">
+        <img src="logo_images/trackmind_logo2.png" class="brand-logo" style="object-fit:contain; height:36px; width:auto;">
+      </a>
+      <div class="footer-links">
+        <a href="index.html#solution">Product</a>
+        <a href="mailto:hello@trackmind.ai">Contact</a>
+        <a href="#" style="display:inline-flex;align-items:center;gap:6px;"><svg style="width:16px;height:16px;"><use href="#i-github"/></svg> GitHub</a>
+      </div>
+    </div>
+    <div class="footer-meta">
+      <p>© 2026 TrackMind AI. All rights reserved.</p>
+      <p>A Nova SBE project.</p>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"><svg><use href="#i-check"/></svg><span id="toast-msg"></span></div>
+
+<script>
+  // =================================================================
+  // CONFIG
+  // =================================================================
+  const API_BASE = 'http://localhost:8000';
+  let MOCK_MODE = false;
+  let lastVerdict = null;
+  let lastQuery = '';
+  const stats = { approved: 0, rejected: 0, pending: 0 };
+  const auditLog = [];
+
+  // =================================================================
+  // MOCK DATA
+  // =================================================================
+  const MOCK_SAMPLES = [
+    {
+      keys: ['door','french','sncf','closing'],
+      verdict: 'CONFLICT DETECTED', tier: 'amber', confidence: 0.78,
+      explanation: "The door closing-force in your spec exceeds the limit defined in SNCF IN1505 Art. 12.3 (max 150 N), while remaining within TSI LOC&PAS §4.2.5.5 (max 200 N). On French infrastructure, the national rule prevails — your design must be revised before homologation.",
+      action: "Reduce closing-force to ≤150 N for French operation, or seek a derogation from EPSF citing TSI conformity.",
+      citations: [
+        { src: 'TSI LOC&PAS §4.2.5.5', lang: 'EN', score: 0.91 },
+        { src: 'SNCF IN1505 Art. 12.3', lang: 'FR', score: 0.88 },
+        { src: 'Spec §3.2 — Doors', lang: 'EN', score: 0.74 }
+      ],
+      chunks: [
+        { src: 'TSI LOC&PAS §4.2.5.5', lang: 'EN', score: 0.91, text: '"The closing force of passenger doors shall not exceed 200 N at the leading edge under nominal conditions, with verification per EN 14752."' },
+        { src: 'SNCF IN1505 Art. 12.3', lang: 'FR', score: 0.88, text: '"La force de fermeture des portes voyageurs ne doit pas dépasser 150 N en bord d\'attaque, mesurée selon le protocole interne SNCF-DT-007."' },
+        { src: 'Spec §3.2 — Doors', lang: 'EN', score: 0.74, text: '"Door closing-force at leading edge: 175 N nominal, 190 N peak (compliant with TSI LOC&PAS)."' }
+      ]
+    },
+    {
+      keys: ['brake','german','db','response'],
+      verdict: 'COMPLIANT', tier: 'green', confidence: 0.94,
+      explanation: "Measured brake response time of 1.6s falls within TSI CCS §4.2.2 (≤2.0s) and DB Richtlinie 408 §3.4 (≤1.8s). No conflicts detected across federal or regional rules. Spec section 5.1 confirms test conditions match the regulatory protocol.",
+      action: "Proceed with type approval. Retain test reports per ISA review.",
+      citations: [
+        { src: 'TSI CCS §4.2.2', lang: 'EN', score: 0.95 },
+        { src: 'DB Ril 408 §3.4', lang: 'DE', score: 0.92 },
+        { src: 'Spec §5.1 — Braking', lang: 'EN', score: 0.81 }
+      ],
+      chunks: [
+        { src: 'TSI CCS §4.2.2', lang: 'EN', score: 0.95, text: '"Brake command response time, measured from command issue to brake-effort onset, shall not exceed 2.0 seconds for emergency braking."' },
+        { src: 'DB Ril 408 §3.4', lang: 'DE', score: 0.92, text: '"Die Reaktionszeit der Bremse darf bei Schnellbremsung 1,8 Sekunden nicht überschreiten, gemessen nach DB-Prüfvorschrift 408.04."' },
+        { src: 'Spec §5.1 — Braking', lang: 'EN', score: 0.81, text: '"Measured emergency brake response time: 1.6s mean across 12 trials (σ=0.08s). Test bench: DB-VV München."' }
+      ]
+    },
+    {
+      keys: ['pantograph','italian','3kv','rfi','geometry'],
+      verdict: 'CONFLICT DETECTED', tier: 'red', confidence: 0.91,
+      explanation: "The proposed pantograph head geometry (1450 mm) violates RFI Norma TE 78 §2.1, which mandates 1600 mm for 3 kV DC lines in Italy. TSI ENE §4.2.8.2 also requires conformity to national geometry. The unit is non-compliant for Italian operation as designed.",
+      action: "Adopt a 1600 mm pantograph head for Italian routes, or fit an Italian-specific pantograph in addition to the existing one.",
+      citations: [
+        { src: 'RFI Norma TE 78 §2.1', lang: 'IT', score: 0.96 },
+        { src: 'TSI ENE §4.2.8.2', lang: 'EN', score: 0.89 },
+        { src: 'Spec §4.4 — Pantograph', lang: 'EN', score: 0.78 }
+      ],
+      chunks: [
+        { src: 'RFI Norma TE 78 §2.1', lang: 'IT', score: 0.96, text: '"Per linee elettrificate a 3 kV CC, la geometria della testa del pantografo deve essere di 1600 mm, conformemente all\'EN 50367 Allegato B."' },
+        { src: 'TSI ENE §4.2.8.2', lang: 'EN', score: 0.89, text: '"Pantograph head geometry shall conform to one of the profiles defined in EN 50367, in line with the geometry declared by the infrastructure manager."' },
+        { src: 'Spec §4.4 — Pantograph', lang: 'EN', score: 0.78, text: '"Pantograph head: 1450 mm geometry per EN 50367 Annex A, suitable for 1.5 kV DC and 25 kV AC operation."' }
+      ]
+    }
+  ];
+
+  const FALLBACK = {
+    verdict: 'INSUFFICIENT DATA', tier: 'amber', confidence: 0.62,
+    explanation: "Cross-referenced TSI and applicable national rules. Partial alignment found, but the retrieved context is insufficient to issue a definitive verdict. A domain expert should validate operating conditions before sign-off.",
+    action: "Provide additional spec sections describing the operational envelope, then re-run the analysis.",
+    citations: [
+      { src: 'TSI LOC&PAS §4.2', lang: 'EN', score: 0.71 },
+      { src: 'National annex (generic)', lang: 'FR', score: 0.65 }
+    ],
+    chunks: [
+      { src: 'TSI LOC&PAS §4.2', lang: 'EN', score: 0.71, text: '"This subsection sets the essential requirements for rolling stock subsystems within the scope of conventional and high-speed interoperability."' },
+      { src: 'National annex (generic)', lang: 'FR', score: 0.65, text: '"Les dispositions nationales s\'appliquent en complément ou en dérogation aux STI, selon notification à l\'Agence."' }
+    ]
+  };
+
+  function pickMock(query) {
+    const q = (query || '').toLowerCase();
+    for (const s of MOCK_SAMPLES) {
+      if (s.keys.some(k => q.includes(k))) return s;
+    }
+    return Object.assign({}, FALLBACK);
+  }
+
+  // =================================================================
+  // API
+  // =================================================================
+  async function checkCollections() {
+    try {
+      const r = await fetch(`${API_BASE}/collections`, { method: 'GET' });
+      if (!r.ok) throw new Error('bad status');
+      MOCK_MODE = false;
+      setStatus('live');
+    } catch (e) {
+      MOCK_MODE = true;
+      setStatus('mock');
+    }
+  }
+
+  async function analyse(query) {
+    if (MOCK_MODE) return mockResponse(query);
+    try {
+      const r = await fetch(`${API_BASE}/analyse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, n_chunks: 5, mock: false })
+      });
+      if (!r.ok) throw new Error('bad status');
+      const raw = await r.json();
+      // normalise to Lovable's format
+      const allChunks = [
+        ...(raw.retrieval?.tsi?.chunks||[]).map(c=>({src:c.article,lang:'EN',score:1-c.distance,text:c.text,source:'tsi'})),
+        ...(raw.retrieval?.nntr?.chunks||[]).map(c=>({src:c.article,lang:'FR',score:1-c.distance,text:c.text,source:'nntr'})),
+        ...(raw.retrieval?.spec?.chunks||[]).map(c=>({src:c.article,lang:'EN',score:1-c.distance,text:c.text,source:'spec'})),
+      ];
+      return {
+        verdict: raw.verdict,
+        tier: (raw.confidence_tier||'AMBER').toLowerCase(),
+        confidence: (raw.confidence_pct||0)/100,
+        explanation: raw.explanation,
+        action: raw.recommended_action,
+        citations: (raw.citations||[]).map(c=>({src:c,lang:c.match(/Arrêté|SNCF|RFN/i)?'FR':'EN',score:0.9})),
+        chunks: allChunks,
+        raw: raw
+      };
+    } catch (e) {
+      MOCK_MODE = true;
+      setStatus('mock');
+      return mockResponse(query);
+    }
+  }
+
+  async function postDecide(decision, payload) {
+    if (MOCK_MODE) return { ok: true, mock: true };
+    try {
+      const r = await fetch(`${API_BASE}/decide`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query_text: payload.query,
+          verdict: payload.verdict,
+          explanation: payload.explanation,
+          recommended_action: payload.action,
+          confidence_tier: (payload.tier||'amber').toUpperCase(),
+          confidence_pct: Math.round((lastVerdict.confidence||0)*100),
+          confidence_reason: '',
+          citations: (lastVerdict.citations||[]).map(c=>c.src),
+          raw_response: JSON.stringify(lastVerdict.raw||{}),
+          tsi_top: '', nntr_top: '', spec_top: '',
+          assessor_id: 'NoBo-Assessor-001',
+          decision: decision.toUpperCase(),
+          notes: '',
+          edited_explanation: payload.explanation,
+          edited_action: payload.action,
+        })
+      });
+      return await r.json();
+    } catch (e) { return { ok: false }; }
+  }
+
+  function mockResponse(query) {
+    const m = pickMock(query);
+    return {
+      query,
+      verdict: m.verdict, tier: m.tier, confidence: m.confidence,
+      explanation: m.explanation, action: m.action,
+      citations: m.citations, chunks: m.chunks,
+      raw: { model: 'trackmind-rag-v0.4 (mock)', query, n_chunks: 5,
+             verdict: m.verdict, tier: m.tier, confidence: m.confidence,
+             retrieved: m.chunks.map(c => ({src:c.src, lang:c.lang, score:c.score})),
+             explanation: m.explanation, action: m.action }
+    };
+  }
+
+  // =================================================================
+  // UI WIRING
+  // =================================================================
+  const $ = id => document.getElementById(id);
+
+  function setStatus(state) {
+    const live = $('btn-live');
+    const mock = $('btn-mock');
+    if (state === 'live') {
+      live.classList.remove('inactive');
+      mock.classList.add('inactive');
+    } else {
+      mock.classList.remove('inactive');
+      live.classList.add('inactive');
+    }
+  }
+
+  async function setMode(mode) {
+    if (mode === 'live') {
+      try {
+        const r = await fetch(`${API_BASE}/collections`);
+        if (!r.ok) throw new Error();
+        MOCK_MODE = false;
+        setStatus('live');
+        toast('Switched to Live Demo', 'success');
+      } catch(e) {
+        MOCK_MODE = true;
+        setStatus('mock');
+        toast('API unavailable — staying in Mock Mode', 'error');
+      }
+    } else {
+      MOCK_MODE = true;
+      setStatus('mock');
+      toast('Switched to Mock Mode', 'success');
+    }
+  }
+
+  // ---------- Step 1: Upload ----------
+  const dz = $('dropzone');
+  const fi = $('file-input');
+  dz.addEventListener('click', () => fi.click());
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+  dz.addEventListener('drop', e => { if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+  fi.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+  $('file-remove').addEventListener('click', () => {
+    fi.value = '';
+    $('uploaded').classList.remove('active');
+    dz.style.display = 'flex';
+    $('step1-num').classList.remove('done');
+  });
+  function handleFile(file) {
+    if (file.type !== 'application/pdf') { toast('Only PDF files are supported.', 'error'); return; }
+    $('file-name').textContent = file.name;
+    $('file-size').textContent = `${(file.size/1024/1024).toFixed(2)} MB · ready for analysis`;
+    $('uploaded').classList.add('active');
+    dz.style.display = 'none';
+    $('step1-num').classList.add('done');
+    toast('Spec uploaded successfully', 'success');
+  }
+
+  // ---------- Step 2: Query ----------
+  const qInput = $('query');
+  const aBtn = $('analyse-btn');
+  qInput.addEventListener('input', () => { aBtn.disabled = !qInput.value.trim(); });
+  qInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (qInput.value.trim()) runAnalysis(); }
+  });
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => {
+      qInput.value = c.dataset.q; aBtn.disabled = false; qInput.focus();
+    });
+  });
+  $('clear-btn').addEventListener('click', () => { qInput.value=''; aBtn.disabled = true; });
+  aBtn.addEventListener('click', runAnalysis);
+
+  async function runAnalysis() {
+    const q = qInput.value.trim();
+    if (!q) return;
+    lastQuery = q;
+    $('results-empty').style.display = 'none';
+    $('results').classList.remove('active');
+    $('results-loading').classList.add('active');
+    aBtn.disabled = true; aBtn.innerHTML = 'Analysing… <svg><use href="#i-sparkles"/></svg>';
+    document.getElementById('step-3').scrollIntoView({ behavior:'smooth', block:'start' });
+
+    const data = await analyse(q);
+    await new Promise(r => setTimeout(r, 600)); // small delay for UX
+
+    $('results-loading').classList.remove('active');
+    renderResults(data);
+    aBtn.disabled = false; aBtn.innerHTML = 'Analyse <svg><use href="#i-sparkles"/></svg>';
+  }
+
+  // ---------- Step 3: Render ----------
+  function renderResults(data) {
+    lastVerdict = data;
+
+    const sourceMap = { tsi: [], nntr: [], spec: [] };
+    (data.chunks || []).forEach(c => {
+      const s = c.src || '';
+      const src = c.source || '';
+      if (s.match(/TSI|LOC|CCS|ENE|PAS/i) || src === 'tsi') sourceMap.tsi.push(c);
+      else if (s.match(/SNCF|Arrêt|RFN|DB|RFI|nntr|national|FR|DE|IT/i) || src === 'nntr') sourceMap.nntr.push(c);
+      else sourceMap.spec.push(c);
+    });
+
+    ['tsi','nntr','spec'].forEach(key => {
+      const el = document.getElementById('chunks-' + key + '-inner');
+      el.innerHTML = '';
+      const chunks = sourceMap[key];
+      if (!chunks.length) {
+        el.innerHTML = '<div style="font-size:12px;color:var(--muted-foreground);padding:4px 0">No chunks retrieved.</div>';
+        return;
+      }
+      chunks.sort((a,b) => (b.score||0)-(a.score||0));
+      chunks.forEach((c, i) => {
+        const langClass = (c.lang||'EN').toLowerCase();
+        const det = document.createElement('details');
+        det.className = 'chunk';
+        if (i === 0) det.open = true;
+        det.innerHTML = `
+          <summary>
+            <span class="chunk-src">${escapeHtml(c.src)}</span>
+            <span class="chunk-meta">
+              <span class="lang-badge ${langClass}">${escapeHtml(c.lang||'EN')}</span>
+              <svg class="chevron"><use href="#i-chevron-right"/></svg>
+            </span>
+          </summary>
+          <p class="chunk-text">${escapeHtml(c.text||'')}</p>`;
+        el.appendChild(det);
+      });
+    });
+
+    const verdict = data.verdict || '';
+    const pill = document.getElementById('verdict-pill');
+    pill.className = 'verdict-pill';
+    if (verdict === 'CONFLICT DETECTED') pill.classList.add('conflict');
+    else if (verdict === 'COMPLIANT') pill.classList.add('compliant');
+    else pill.classList.add('insufficient');
+    document.getElementById('verdict-label').textContent = verdict || '—';
+
+    const tier = data.tier || 'amber';
+
+    const pct = Math.round((data.confidence||0)*100);
+    document.getElementById('conf-num').textContent = `${pct}%`;
+    document.getElementById('conf-marker').style.left = pct + '%';
+
+    document.getElementById('explanation').textContent = data.explanation || '';
+    document.getElementById('action').textContent = data.action || '';
+    document.getElementById('review-explanation').value = data.explanation || '';
+    document.getElementById('review-action').value = data.action || '';
+
+    document.getElementById('raw-output').textContent = JSON.stringify(data.raw || data, null, 2);
+
+    stats.pending += 1;
+    refreshStats();
+
+    document.getElementById('results').classList.add('active');
+  }
+
+  // ---------- Approve / Reject ----------
+  $('approve-btn').addEventListener('click', () => decide('approved'));
+  $('reject-btn').addEventListener('click', () => decide('rejected'));
+
+  async function decide(decision) {
+    if (!lastVerdict) { toast('Run an analysis first.', 'error'); return; }
+    const payload = {
+      query: lastQuery,
+      verdict: lastVerdict.verdict,
+      tier: lastVerdict.tier,
+      explanation: $('review-explanation').value,
+      action: $('review-action').value,
+      timestamp: new Date().toISOString()
+    };
+    await postDecide(decision, payload);
+    if (decision === 'approved') stats.approved += 1; else stats.rejected += 1;
+    if (stats.pending > 0) stats.pending -= 1;
+    addAuditEntry(decision);
+    refreshStats();
+    toast(decision === 'approved' ? 'Verdict approved & logged' : 'Verdict rejected & logged',
+          decision === 'approved' ? 'success' : 'error');
+  }
+
+  function addAuditEntry(decision) {
+    const tier = lastVerdict.tier || 'amber';
+    const dotCls = decision === 'rejected' ? 'red' : (tier === 'green' ? 'green' : tier === 'red' ? 'red' : 'amber');
+    auditLog.unshift({ q: lastQuery, time: new Date(), dotCls, decision });
+    const ul = $('audit-log'); ul.innerHTML = '';
+    auditLog.slice(0, 8).forEach(e => {
+      const li = document.createElement('li');
+      const t = e.time.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      li.innerHTML = `<span class="audit-dot ${e.dotCls}"></span>
+        <span class="audit-q">${escapeHtml(e.q)}</span>
+        <span class="audit-time">${t}</span>`;
+      ul.appendChild(li);
+    });
+  }
+
+  function refreshStats() {
+    $('stat-approved').textContent = stats.approved;
+    $('stat-rejected').textContent = stats.rejected;
+    $('stat-pending').textContent = stats.pending;
+  }
+
+  // ---------- Toast ----------
+  let toastTimer;
+  function toast(msg, kind) {
+    const t = $('toast');
+    t.className = 'toast' + (kind ? ' ' + kind : '') + ' show';
+    $('toast-msg').textContent = msg;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- Init ----------
+  checkCollections();
+</script>
+</body>
+</html>
