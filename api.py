@@ -10,10 +10,13 @@ Run:
     pip install fastapi uvicorn
     uvicorn api:app --reload --port 8000
 
-    # Mock mode (no Gemini key needed):
-    MOCK=1 uvicorn api:app --reload --port 8000
+    # Then open: http://localhost:8000/demo.html
 
-    # Then open: http://localhost:8000
+Mode selection:
+    The frontend controls Live API vs Mock Mode by sending:
+        mock=false  # Live API
+        mock=true   # Mock Mode
+    to the /analyse endpoint.
 """
 
 import os
@@ -34,7 +37,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_MOCK = os.environ.get("MOCK", "").lower() in ("1", "true", "yes") or not os.environ.get("GEMINI_API_KEY", "")
+_MOCK = False
 
 # ── Lazy-load heavy modules once ──────────────────────────────────────────────
 
@@ -98,6 +101,8 @@ class DecisionRequest(BaseModel):
     edited_explanation: str = ""
     edited_action: str = ""
 
+    mock: bool = False
+
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
@@ -132,7 +137,7 @@ def analyse(req: AnalyseRequest):
     Full pipeline: retrieve → reason → confidence gate.
     Returns everything the frontend needs to render the result.
     """
-    mock = req.mock or _MOCK
+    mock = req.mock
     try:
         tri_source_retrieve, format_context_for_llm, _ = get_retrieval()
         reason, confidence_gate = get_reasoning()
@@ -227,7 +232,7 @@ def decide(req: DecisionRequest):
             tsi_top=req.tsi_top,
             nntr_top=req.nntr_top,
             spec_top=req.spec_top,
-            mock=_MOCK,
+            mock=req.mock,
         )
         return {"status": "logged", **ids}
     except Exception as e:
