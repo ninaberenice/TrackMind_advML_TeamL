@@ -4,13 +4,13 @@ api.py
 TrackMind AI — FastAPI backend.
 
 Exposes retrieval, reasoning and audit as REST endpoints so the HTML
-frontend can call them directly. Replaces the Streamlit server.
+frontend can call them directly.
 
 Run:
     pip install fastapi uvicorn
     uvicorn api:app --reload --port 8000
 
-    # Then open: http://localhost:8000/demo.html
+    # Then open: http://localhost:8000
 
 Mode selection:
     The frontend controls Live API vs Mock Mode by sending:

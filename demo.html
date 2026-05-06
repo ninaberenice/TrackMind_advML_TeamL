@@ -7,333 +7,9 @@
 <meta name="description" content="Try TrackMind AI: upload a technical spec, ask in any language, get a cited compliance verdict." />
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<style>
-  header.nav .nav-inner {
-    position: relative;
-    max-width: 1364px;
-    padding: 11px 22px;
-  }
-  header.nav .brand-logo {
-    height: 40px !important;
-    width: auto;
-  }
-  header.nav .nav-links {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    gap: 35px;
-    font-size: 15px;
-  }
-  header.nav .nav-mode {
-    display: flex;
-    align-items: center;
-    gap: 35px;
-    margin-left: auto;
-  }
-  header.nav .nav-status {
-    font-size: 12px;
-    padding: 4px 13px;
-  }
-  main { padding: 128px 0 64px; }
-  main .container { max-width: 1380px; }
-  .page-head { max-width: 760px; margin: 0 auto 48px; text-align: center; }
-  .page-title { font-size: clamp(32px, 5vw, 56px); font-weight: 600; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
-  .page-sub { margin: 18px auto 0; max-width: 600px; font-size: 17px; color: var(--muted-foreground); }
-  .step { background: var(--card); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow-card); padding: 32px; margin-bottom: 24px; }
-  @media (min-width: 768px) { .step { padding: 40px; } }
-  .step-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
-  .step-num { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 14px; font-weight: 600; flex-shrink: 0; }
-  .step-num.done { background: var(--accent); }
-  .step-title { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
-  .step-desc { margin: 4px 0 0; font-size: 13px; color: var(--muted-foreground); }
-  .dropzone { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 48px 24px; text-align: center; border: 2px dashed var(--border); border-radius: 16px; background: rgba(238,241,245,.4); transition: .2s ease; cursor: pointer; }
-  .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: rgba(76,175,59,.06); }
-  .dropzone svg { width: 32px; height: 32px; color: var(--muted-foreground); }
-  .dropzone p { margin: 0; font-size: 14px; color: var(--muted-foreground); }
-  .dropzone strong { color: var(--foreground); font-weight: 600; }
-  .dz-hint { font-size: 12px; color: var(--muted-foreground); }
-  .uploaded { display: none; align-items: center; gap: 12px; padding: 16px 20px; border-radius: 12px; background: rgba(76,175,59,.08); border: 1px solid rgba(76,175,59,.3); }
-  .uploaded.active { display: flex; }
-  .uploaded .check { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; flex-shrink: 0; }
-  .uploaded .check svg { width: 16px; height: 16px; }
-  .uploaded .file-name { font-size: 14px; font-weight: 600; flex: 1; }
-  .uploaded .file-size { font-size: 12px; color: var(--muted-foreground); }
-  .uploaded .remove { color: var(--muted-foreground); padding: 4px; }
-  .uploaded .remove svg { width: 16px; height: 16px; }
-  .preloaded { margin-top: 20px; }
-  .preloaded-lab { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .2em; color: var(--muted-foreground); margin: 0 0 12px; }
-  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
-  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font-size: 13px; background: rgba(14,37,71,.06); color: var(--primary); border: 1px solid rgba(14,37,71,.1); }
-  .pill svg { width: 12px; height: 12px; }
-  .pill .lock { color: var(--muted-foreground); }
-  .query-box { width: 100%; min-height: 90px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--border); background: var(--background); font-size: 16px; color: var(--foreground); outline: none; transition: .2s; resize: vertical; line-height: 1.5; }
-  .query-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(76,175,59,.18); }
-  .query-controls { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  .examples-row { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
-  .examples-row .lab { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .2em; color: var(--muted-foreground); margin-right: 4px; }
-  .chip { border: 1px solid var(--border); background: rgba(238,241,245,.5); padding: 6px 14px; border-radius: 999px; font-size: 13px; color: var(--muted-foreground); transition: .2s; }
-  .chip:hover { border-color: rgba(76,175,59,.4); background: rgba(76,175,59,.1); color: var(--foreground); }
-  .step-actions { display: flex; justify-content: flex-end; gap: 12px; flex-shrink: 0; }
-  @media (max-width: 980px) { .query-controls { flex-direction: column; align-items: stretch; } .step-actions { justify-content: flex-start; } }
-  #step-3 { scroll-margin-top: 105px; }
-  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-sm); padding: 24px; }
-  .panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
-  .panel-head svg { width: 18px; height: 18px; color: var(--accent); }
-  .panel-title { margin: 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .15em; }
-  .results-grid-top { display: grid; gap: 20px; grid-template-columns: 1fr; margin-bottom: 20px; }
-  @media (min-width: 1024px) { .results-grid-top { grid-template-columns: 1fr 1fr; } }
-  .assessor-panel { grid-column: 1 / -1; }
-  .assessor-grid { display: grid; gap: 24px; grid-template-columns: 1fr; }
-  .source-group { margin-bottom: 24px; }
-  .source-group:last-child { margin-bottom: 0; }
-  .source-label { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .15em; color: var(--muted-foreground); margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-  .doc-source > summary.source-label { cursor: pointer; list-style: none; user-select: none; }
-  .doc-source > summary.source-label::-webkit-details-marker { display: none; }
-  .doc-source > summary.source-label .chevron { margin-left: auto; }
-  .results-grid-top > .panel:first-child .source-label { font-size: 12px; font-weight: 800; letter-spacing: .18em; color: #445064; }
-  #citations-block .source-group { padding: 18px 18px; border: 1px solid var(--border); border-radius: 16px; background: rgba(238,241,245,.28); }
-  #citations-block .source-label { border-top: none; border-bottom: none; padding-top: 0; padding-bottom: 0; margin-top: 0; font-size: 10px; letter-spacing: .13em; }
-  .source-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .source-dot.tsi { background: #0e2547; }
-  .source-dot.nntr { background: #f5a524; }
-  .source-dot.spec { background: #4caf3b; }
-  .citation-list { display: flex; flex-wrap: wrap; gap: 8px; }
-  .citation-chip { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 8px; background: rgba(238,241,245,.55); border: 1px solid var(--border); font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; color: var(--primary); }
-  .citation-chip.tsi { color: var(--primary); background: rgba(14,37,71,.05); border-color: rgba(14,37,71,.18); }
-  .citation-chip.nntr { color: #92400e; background: rgba(245,165,36,.10); border-color: rgba(245,165,36,.32); }
-  .citation-chip.spec { color: #166534; background: rgba(76,175,59,.10); border-color: rgba(76,175,59,.32); }
-  .chunk { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; background: rgba(238,241,245,.4); transition: .2s ease; }
-  .chunk summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; list-style: none; font-size: 13px; }
-  .chunk summary::-webkit-details-marker { display: none; }
-  .chunk.tsi { border-color: rgba(14,37,71,.18); }
-  .chunk.nntr { border-color: rgba(245,165,36,.32); }
-  .chunk.spec { border-color: rgba(76,175,59,.32); }
-  .chunk summary { margin: -14px -16px; padding: 14px 16px; border-radius: 12px; }
-  .chunk[open] summary { border-radius: 12px 12px 0 0; }
-  .chunk.tsi summary { color: var(--primary); background: rgba(14,37,71,.05); }
-  .chunk.nntr summary { color: #92400e; background: rgba(245,165,36,.10); }
-  .chunk.spec summary { color: #166534; background: rgba(76,175,59,.10); }
-  .chunk summary .chunk-src { color: currentColor; }
-  .chunk-ref { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 8px; border: 1px solid var(--border); font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; font-weight: 700; flex-shrink: 0; }
-  .chunk-ref.tsi { color: var(--primary); background: rgba(14,37,71,.05); border-color: rgba(14,37,71,.18); }
-  .chunk-ref.nntr { color: #92400e; background: rgba(245,165,36,.10); border-color: rgba(245,165,36,.32); }
-  .chunk-ref.spec { color: #166534; background: rgba(76,175,59,.10); border-color: rgba(76,175,59,.32); }
-  .chunk-src { font-weight: 600; color: var(--foreground); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .chunk-meta { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
-  .lang-badge { padding: 2px 8px; border-radius: 6px; font-family: ui-monospace, monospace; font-size: 11px; background: var(--card); color: var(--muted-foreground); border: 1px solid var(--border); }
-  .lang-badge.en { color: #2563eb; border-color: rgba(37,99,235,.3); background: rgba(37,99,235,.06); }
-  .lang-badge.fr { color: #7c3aed; border-color: rgba(124,58,237,.3); background: rgba(124,58,237,.06); }
-  .lang-badge.de { color: #ea580c; border-color: rgba(234,88,12,.3); background: rgba(234,88,12,.06); }
-  .lang-badge.it { color: #16a34a; border-color: rgba(22,163,74,.3); background: rgba(22,163,74,.06); }
-  .chunk-text { margin: 12px 0 0; font-size: 13px; color: rgba(12,26,51,.78); line-height: 1.6; padding-top: 12px; border-top: 1px solid var(--border); }
-  .chevron { width: 14px; height: 14px; transition: transform .2s; color: var(--muted-foreground); }
-  details[open] .chevron { transform: rotate(90deg); }
-  .verdict-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 999px; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border: 1px solid currentColor; }
-  .verdict-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
-  .verdict-pill.conflict { color: #e0473e; background: rgba(224,71,62,.08); }
-  .verdict-pill.compliant { color: #4caf3b; background: rgba(76,175,59,.08); }
-  .verdict-pill.insufficient { color: #888; background: rgba(136,136,136,.08); }
-  .verdict-row {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 10px 0 24px;
-  }
-  .analysis-time { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(76,175,59,.22); background: rgba(76,175,59,.06); color: var(--muted-foreground); font-size: 11px; font-weight: 600; letter-spacing: .02em; }
-  #analysis-time-slot {
-    display: flex;
-    margin-top: 8px;
-  }
-  .analysis-time .analysis-time-label { color: var(--muted-foreground); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
-  .analysis-time .analysis-time-value { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; color: #2f7d25; }
-  .conf-block { margin-bottom: 18px; }
-  .conf-head {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 10px;
-    font-size: 11px;
-    color: var(--muted-foreground);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: .15em;
-    font-weight: 600;
-  }
-  #results .conf-head > span:first-child {
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: .18em;
-    color: #445064;
-  }
-  .conf-pill { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 999px; border: 1px solid currentColor; font-size: 11px; font-weight: 700; letter-spacing: .08em; background: rgba(136,136,136,.08); color: #888; }
-  .conf-pill.low { color: #e0473e; background: rgba(224,71,62,.08); }
-  .conf-pill.mid { color: #f5a524; background: rgba(245,165,36,.12); }
-  .conf-pill.high { color: #4caf3b; background: rgba(76,175,59,.08); }
-  .field-block { margin-bottom: 24px; }
-  .field-lab { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .15em; color: var(--muted-foreground); margin: 0 0 12px; }
-  .field-text { margin: 0; padding: 14px 16px; border-radius: 10px; background: rgba(238,241,245,.4); border: 1px solid var(--border); font-size: 13px; line-height: 1.6; color: rgba(12,26,51,.85); }
-  .field-text.numbered p { margin: 0 0 12px; }
-  .field-text.numbered p:last-child { margin-bottom: 0; }
-  details.raw { margin-top: 16px; border: 1px solid var(--border); border-radius: 10px; }
-  details.raw summary { padding: 10px 14px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--muted-foreground); list-style: none; display: flex; justify-content: space-between; align-items: center; }
-  details.raw summary::-webkit-details-marker { display: none; }
-  details.raw pre { margin: 0; padding: 14px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; line-height: 1.5; background: rgba(14,37,71,.04); color: rgba(12,26,51,.8); border-top: 1px solid var(--border); border-radius: 0 0 10px 10px; max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
-  .review-textarea { width: 100%; min-height: 90px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--background); font-size: 13px; line-height: 1.5; color: var(--foreground); outline: none; transition: .2s; resize: vertical; box-sizing: border-box; }
-  .review-textarea.fit-content { min-height: 0; overflow: hidden; resize: none; }
-  .review-textarea.compact { min-height: 64px; }
-  .review-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(76,175,59,.18); }
-  .review-actions { display: flex; gap: 10px; margin: 16px 0; }
-  .review-actions .btn { flex: 1; }
-  .audit-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 16px; }
-  .stat { text-align: center; padding: 12px 8px; border-radius: 10px; background: rgba(238,241,245,.5); border: 1px solid var(--border); }
-  .stat-num { display: block; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
-  .stat-num.ok { color: var(--accent); }
-  .stat-num.warn { color: var(--warning); }
-  .stat-num.bad { color: var(--danger); }
-  .stat-lab { display: block; margin-top: 2px; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted-foreground); font-weight: 600; }
-  .audit-log { list-style: none; padding: 0; margin: 0; max-height: 280px; overflow: auto; }
-  .audit-log li { display: flex; align-items: center; gap: 10px; padding: 8px 0; font-size: 12px; border-bottom: 1px dashed var(--border); }
-  .audit-log li:last-child { border-bottom: none; }
-  .audit-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-  .audit-dot.green { background: var(--accent); }
-  .audit-dot.red { background: var(--danger); }
-  .audit-dot.amber { background: var(--warning); }
-  .audit-q { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground); }
-  .audit-time { font-family: ui-monospace, monospace; color: var(--muted-foreground); flex-shrink: 0; }
-  .results-loading { display: none; align-items: center; gap: 12px; padding: 24px; border: 1px solid var(--border); border-radius: 16px; background: rgba(238,241,245,.4); margin-bottom: 24px; font-size: 14px; color: var(--muted-foreground); }
-  .results-loading.active { display: flex; }
-  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
-  .results-section { display: none; animation: fade-in .5s ease; }
-  .results-section.active { display: block; }
-  .empty-state { padding: 48px 24px; text-align: center; color: var(--muted-foreground); font-size: 14px; }
-  .empty-state svg { width: 36px; height: 36px; margin: 0 auto 12px; opacity: .4; display: block; }
-  .mode-tip { position: relative; }
-  .mode-tip:hover::after { content: attr(data-tip); position: absolute; top: calc(100% + 10px); right: 0; width: 310px; padding: 10px 12px; border-radius: 10px; background: var(--primary); color: white; font-size: 11px; line-height: 1.5; letter-spacing: 0; text-transform: none; font-weight: 500; box-shadow: var(--shadow-card); z-index: 200; }
-  .show-more-chunks { width: 100%; margin-top: 4px; padding: 9px 12px; border-radius: 10px; border: 1px dashed var(--border); background: rgba(238,241,245,.35); color: var(--muted-foreground); font-size: 12px; font-weight: 600; transition: .2s; }
-  .show-more-chunks:hover { border-color: rgba(76,175,59,.4); background: rgba(76,175,59,.08); color: var(--foreground); }
-  .record-export { display: none; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(76,175,59,.08); border: 1px solid rgba(76,175,59,.28); font-size: 13px; color: var(--foreground); }
-  .record-export.active { display: flex; }
-  .record-export span { color: var(--muted-foreground); }
-  .record-actions { display: flex; gap: 8px; flex-shrink: 0; }
-  #results .panel .field-block { margin-bottom: 26px; }
-  #results .panel .source-group { margin-bottom: 26px; }
-  #session-dashboard .field-lab {
-    margin-top: 22px;
-    margin-bottom: 12px;
-  }
-  .tooltip-label { display: inline-flex; align-items: center; gap: 6px; }
-  .info-tip { position: relative; display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border); background: rgba(14,37,71,.05); color: var(--muted-foreground); cursor: help; }
-  .info-tip svg { width: 11px; height: 11px; stroke-width: 2.4; }
-  .info-tip:hover::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 8px); width: 280px; padding: 10px 12px; border-radius: 10px; background: var(--primary); color: white; font-size: 11px; line-height: 1.5; letter-spacing: 0; text-transform: none; font-weight: 500; box-shadow: var(--shadow-card); z-index: 250; }
-  @media (max-width: 640px) { .record-export { flex-direction: column; align-items: flex-start; } .record-actions { width: 100%; } .record-actions .btn { flex: 1; } }
-  .conflict-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-  .conflict-grid .chunk { margin-bottom: 0; }
-  .conflict-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .15em; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
-  @media (max-width: 768px) { .conflict-grid { grid-template-columns: 1fr; } }
-  @media (max-width: 1024px) {
-    .doc-context-grid { grid-template-columns: 1fr !important; }
-    .verdict-inner-grid { grid-template-columns: 1fr !important; }
-  }
-  @media (max-width: 1024px) {
-    #results > div[style*="grid-template-columns:1fr 1fr"] {
-      grid-template-columns: 1fr !important;
-    }
-  }
-
-  /* Unified formatting for labels inside Results and Session Dashboard */
-  #results .conf-head,
-  #results .field-lab,
-  #session-dashboard .field-lab {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 10px !important;
-    margin: 0 0 12px !important;
-    font-size: 12px !important;
-    font-weight: 800 !important;
-    letter-spacing: .18em !important;
-    text-transform: uppercase !important;
-    color: #445064 !important;
-    line-height: 1.2 !important;
-  }
-
-  #results .conf-head {
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-  }
-
-  #results .field-block {
-    margin-bottom: 26px;
-  }
-
-  #results .panel .source-group {
-    margin-bottom: 26px;
-  }
-
-  #session-dashboard .field-lab {
-    margin-top: 24px !important;
-    margin-bottom: 12px !important;
-  }
-
-  /* One shared citations box */
-  .citations-box {
-    padding: 18px;
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    background: rgba(238,241,245,.28);
-  }
-
-  #citations-block .source-group {
-    padding: 0;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    margin-bottom: 22px;
-  }
-
-  #citations-block .source-group:last-child {
-    margin-bottom: 0;
-  }
-
-  #citations-block .source-label {
-    border: none;
-    padding: 0;
-    margin: 0 0 10px;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: .18em;
-    color: #445064;
-  }
-
-  /* Keeps Confidence level value beside the label */
-  #results .conf-head {
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-  }
-
-  /* Makes labels like Explanation / Recommended action / Citations behave like the Confidence title */
-  #results .field-lab,
-  #session-dashboard .field-lab {
-    width: fit-content;
-  }
-
-  /* Better spacing after each labelled section */
-  #results .field-block {
-    margin-bottom: 26px;
-  }
-
-  /* Recent audit log spacing */
-  #session-dashboard .field-lab {
-    margin-top: 24px !important;
-    margin-bottom: 12px !important;
-  }
-</style>
 </head>
-<body>
 
+<body class="page-demo">
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
@@ -347,13 +23,12 @@
     <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
     <symbol id="i-thumbs-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-6 0v4H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12.5a2 2 0 0 0 2-1.7l1.4-8a2 2 0 0 0-2-2.3z"/></symbol>
     <symbol id="i-thumbs-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 6 0v-4h3a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H6.5a2 2 0 0 0-2 1.7l-1.4 8A2 2 0 0 0 5 15z"/></symbol>
-    <symbol id="i-github" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5 3.3 9.3 7.9 10.8.6.1.8-.3.8-.6v-2.1c-3.2.7-3.9-1.5-3.9-1.5-.5-1.4-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.2 1.2.9-.3 1.9-.4 2.9-.4s2 .1 2.9.4c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.9.1 3.2.7.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.8C23.5 5.7 18.3.5 12 .5z"/></symbol>
   </defs>
 </svg>
 
 <header class="nav">
   <div class="nav-inner">
-    <a href="index.html" class="brand"><img src="logo_images/trackmind_logo2.png" class="brand-logo" style="object-fit:contain; height:36px; width:auto;"></a>
+    <a href="index.html" class="brand"><img src="logo_images/trackmind_logo2.png" class="brand-logo" alt="TrackMind logo"></a>
     <nav class="nav-links"><a href="index.html#problem">Problem</a><a href="index.html#solution">Solution</a><a href="index.html#impact">Impact</a><a href="index.html#moat">Why Us</a></nav>
     <div class="nav-mode"><button id="btn-live" class="nav-status status-live" onclick="setMode('live')"><span class="status-dot"></span> Live API</button><button id="btn-mock" class="nav-status status-mock inactive mode-tip" onclick="setMode('mock')" data-tip="Mock Mode uses canned LLM responses while keeping the same retrieval flow."><span class="status-dot"></span> Mock Mode</button></div>
   </div>
@@ -364,142 +39,74 @@
     <div class="page-head">
       <p class="eyebrow">Interactive Demo</p>
       <h1 class="page-title text-gradient">Run a real compliance check.</h1>
-      <p class="page-sub">Ask in any language. Retrieve French regulatory evidence. Review and approve with a full audit trail.</p>    </div>
-    
+      <p class="page-sub">Ask in any language. Retrieve French regulatory evidence. Review and approve with a full audit trail.</p>
+    </div>
+
     <section class="step" id="step-1">
-      <div class="step-head">
-        <div class="step-num" id="step1-num">1</div>
-        <div><h2 class="step-title">Upload your technical specification</h2><p class="step-desc">PDF, up to 50 MB. Stays on your environment.</p></div>
-      </div>
-      <div class="dropzone" id="dropzone">
-        <svg><use href="#i-upload"/></svg>
-        <p><strong>Drag &amp; drop</strong> your PDF here, or <strong style="color: var(--accent)">browse</strong></p>
-        <p class="dz-hint">PDF only · max 50 MB</p>
-        <input type="file" id="file-input" accept="application/pdf" style="display:none"/>
-      </div>
-      <div class="uploaded" id="uploaded">
-        <div class="check"><svg><use href="#i-check"/></svg></div>
-        <div style="flex:1; min-width:0"><div class="file-name" id="file-name"></div><div class="file-size" id="file-size"></div></div>
-        <button class="remove" id="file-remove" title="Remove"><svg><use href="#i-x"/></svg></button>
-      </div>
-      <div class="preloaded">
-        <p class="preloaded-lab">Pre-loaded knowledge base</p>
-        <div class="pill-row">
-          <span class="pill"><svg class="lock"><use href="#i-lock"/></svg> EU TSI Regulations · pre-loaded</span>
-          <span class="pill"><svg class="lock"><use href="#i-lock"/></svg> French RFN Rules · pre-loaded</span>
-        </div>
-      </div>
+      <div class="step-head"><div class="step-num" id="step1-num">1</div><div><h2 class="step-title">Upload your technical specification</h2><p class="step-desc">PDF, up to 50 MB. Stays on your environment.</p></div></div>
+      <div class="dropzone" id="dropzone"><svg><use href="#i-upload"/></svg><p><strong>Drag &amp; drop</strong> your PDF here, or <strong style="color:var(--accent)">browse</strong></p><p class="dz-hint">PDF only · max 50 MB</p><input type="file" id="file-input" accept="application/pdf" class="hidden"/></div>
+      <div class="uploaded" id="uploaded"><div class="check"><svg><use href="#i-check"/></svg></div><div class="flex-min"><div class="file-name" id="file-name"></div><div class="file-size" id="file-size"></div></div><button class="remove" id="file-remove" title="Remove"><svg><use href="#i-x"/></svg></button></div>
+      <div class="preloaded"><p class="preloaded-lab">Pre-loaded knowledge base</p><div class="pill-row"><span class="pill"><svg class="lock"><use href="#i-lock"/></svg> EU TSI Regulations · pre-loaded</span><span class="pill"><svg class="lock"><use href="#i-lock"/></svg> French RFN Rules · pre-loaded</span></div></div>
     </section>
 
     <section class="step" id="step-2">
-      <div class="step-head">
-        <div class="step-num" id="step2-num">2</div>
-        <div><h2 class="step-title">Ask your compliance question</h2><p class="step-desc">Press <kbd style="font-family:ui-monospace,monospace; font-size:11px; padding:1px 6px; border:1px solid var(--border); border-radius:4px; background:var(--secondary)">Enter</kbd> to analyse.</p></div>
-      </div>
+      <div class="step-head"><div class="step-num" id="step2-num">2</div><div><h2 class="step-title">Ask your compliance question</h2><p class="step-desc">Press <kbd class="kbd-hint">Enter</kbd> to analyse.</p></div></div>
       <textarea id="query" class="query-box" placeholder="Ask in any language about any TSI requirement, French RFN rule, or conflict between them."></textarea>
       <div class="query-controls">
-        <div class="examples-row">
-          <span class="lab">Examples:</span>
-          <button class="chip" data-q="Does IberRail's door obstacle detection testing satisfy French RFN requirements under Arrêté 2012 Article 49?">Door obstacle test under Article 49</button>
-          <button class="chip" data-q="What CAS single-agent operation requirements does the IB-EMU-450 need for French TER services?">CAS door operation on French TER</button>
-        </div>
-        <div class="step-actions">
-          <button class="btn btn-outline" id="clear-btn">Clear</button>
-          <button class="btn btn-primary" id="analyse-btn" disabled>Analyse <svg><use href="#i-sparkles"/></svg></button>
-        </div>
+        <div class="examples-row"><span class="lab">Examples:</span><button class="chip" data-q="Does IberRail's door obstacle detection testing satisfy French RFN requirements under Arrêté 2012 Article 49?">Door obstacle test under Article 49</button><button class="chip" data-q="What CAS single-agent operation requirements does the IB-EMU-450 need for French TER services?">CAS door operation on French TER</button></div>
+        <div class="step-actions"><button class="btn btn-outline" id="clear-btn">Clear</button><button class="btn btn-primary" id="analyse-btn" disabled>Analyse <svg><use href="#i-sparkles"/></svg></button></div>
       </div>
     </section>
 
     <section class="step" id="step-3">
-      <div class="step-head">
-        <div class="step-num" id="step3-num">3</div>
-        <div>
-          <h2 class="step-title">Results</h2>
-          <p class="step-desc">Document context · Verdict · Assessor review.</p>
-          <span id="analysis-time-slot"></span>
-        </div>
-      </div>
-      <div class="results-loading" id="results-loading"><div class="spinner"></div><span id="loading-msg">Retrieving across TSI, French RFN rules and your spec doc…</span></div>      <div class="empty-state" id="results-empty">
-        <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Run an analysis to see the results.
-      </div>
+      <div class="step-head"><div class="step-num" id="step3-num">3</div><div><h2 class="step-title">Results</h2><p class="step-desc">Document context · Verdict · Assessor review.</p><span id="analysis-time-slot"></span></div></div>
+      <div class="results-loading" id="results-loading"><div class="spinner"></div><span id="loading-msg">Retrieving across TSI, French RFN rules and your spec doc…</span></div>
+      <div class="empty-state" id="results-empty"><svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Run an analysis to see the results.</div>
+
       <div class="results-section" id="results">
         <div class="results-grid-top">
-          
-          <!-- COLUNA ESQUERDA: Document Context -->
           <div class="panel">
             <div class="panel-head"><svg><use href="#i-file"/></svg><h3 class="panel-title">Document context</h3></div>
-            <details class="source-group doc-source" open>
-              <summary class="source-label"><span class="source-dot tsi"></span>EU TSI Regulations <span class="lang-badge en">EN</span><svg class="chevron"><use href="#i-chevron-right"/></svg></summary>
-              <div id="chunks-tsi-inner"></div>
-            </details>
-            <details class="source-group doc-source" open>
-              <summary class="source-label"><span class="source-dot nntr"></span>French RFN Rules <span class="lang-badge fr">FR</span><svg class="chevron"><use href="#i-chevron-right"/></svg></summary>
-              <div id="chunks-nntr-inner"></div>
-            </details>
-            <details class="source-group doc-source" open>
-              <summary class="source-label"><span class="source-dot spec"></span>Your Specifications <span class="lang-badge en">EN</span><svg class="chevron"><use href="#i-chevron-right"/></svg></summary>
-              <div id="chunks-spec-inner"></div>
-            </details>
+            <details class="source-group doc-source" open><summary class="source-label"><span class="source-dot tsi"></span>EU TSI Regulations <span class="lang-badge en">EN</span><svg class="chevron"><use href="#i-chevron-right"/></svg></summary><div id="chunks-tsi-inner"></div></details>
+            <details class="source-group doc-source" open><summary class="source-label"><span class="source-dot nntr"></span>French RFN Rules <span class="lang-badge fr">FR</span><svg class="chevron"><use href="#i-chevron-right"/></svg></summary><div id="chunks-nntr-inner"></div></details>
+            <details class="source-group doc-source" open><summary class="source-label"><span class="source-dot spec"></span>Your Specifications <span class="lang-badge en">EN</span><svg class="chevron"><use href="#i-chevron-right"/></svg></summary><div id="chunks-spec-inner"></div></details>
           </div>
 
-          <!-- COLUNA DIREITA: Verdict -->
-          <div style="display:flex; flex-direction:column; gap:20px;">
-            
-            <!-- Verdict -->
+          <div class="verdict-col">
             <div class="panel">
               <div class="panel-head"><svg><use href="#i-scale"/></svg><h3 class="panel-title">Verdict</h3></div>
               <div class="verdict-row"><span id="verdict-pill" class="verdict-pill"><span class="dot"></span><span id="verdict-label"></span></span></div>
               <div class="conf-block">
                 <div class="conf-head"><span class="tooltip-label">Confidence level <span class="info-tip" data-tip="Confidence reflects source coverage, citation support and consistency across retrieved evidence."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.2 9a3 3 0 1 1 5.2 2c-.9.8-1.4 1.2-1.4 2.3"/><path d="M12 17h.01"/></svg></span></span><span id="conf-num" class="conf-pill">—</span></div>
-                <p id="conf-reason" style="margin:8px 0 0; font-size:12px; color:var(--muted-foreground); line-height:1.5;"></p>
+                <p id="conf-reason" style="margin:8px 0 0;font-size:12px;color:var(--muted-foreground);line-height:1.5;"></p>
               </div>
               <div class="field-block"><p class="field-lab">Explanation</p><div class="field-text numbered" id="explanation"></div></div>
               <div class="field-block"><p class="field-lab">Recommended action</p><div class="field-text numbered" id="action"></div></div>
               <div class="field-block" id="citations-block" style="display:none">
                 <p class="field-lab">Citations</p>
-
                 <div class="citations-box">
-                  <div class="source-group" id="citations-tsi-group" style="display:none">
-                    <div class="source-label"><span class="source-dot tsi"></span>EU TSI Regulations</div>
-                    <div class="citation-list" id="citations-tsi"></div>
-                  </div>
-
-                  <div class="source-group" id="citations-nntr-group" style="display:none">
-                    <div class="source-label"><span class="source-dot nntr"></span>French RFN Rules</div>
-                    <div class="citation-list" id="citations-nntr"></div>
-                  </div>
-
-                  <div class="source-group" id="citations-spec-group" style="display:none">
-                    <div class="source-label"><span class="source-dot spec"></span>Your Specifications</div>
-                    <div class="citation-list" id="citations-spec"></div>
-                  </div>
+                  <div class="source-group" id="citations-tsi-group" style="display:none"><div class="source-label"><span class="source-dot tsi"></span>EU TSI Regulations</div><div class="citation-list" id="citations-tsi"></div></div>
+                  <div class="source-group" id="citations-nntr-group" style="display:none"><div class="source-label"><span class="source-dot nntr"></span>French RFN Rules</div><div class="citation-list" id="citations-nntr"></div></div>
+                  <div class="source-group" id="citations-spec-group" style="display:none"><div class="source-label"><span class="source-dot spec"></span>Your Specifications</div><div class="citation-list" id="citations-spec"></div></div>
                 </div>
               </div>
             </div>
-
           </div>
-          
-          <!-- Assessor Review -->
+
           <div class="panel assessor-panel">
             <div class="panel-head"><svg><use href="#i-shield"/></svg><h3 class="panel-title">Assessor review</h3></div>
             <div class="field-block"><p class="field-lab">Edit explanation</p><textarea id="review-explanation" class="review-textarea fit-content"></textarea></div>
             <div class="field-block"><p class="field-lab">Edit recommended action</p><textarea id="review-action" class="review-textarea fit-content"></textarea></div>
             <div class="field-block"><p class="field-lab">Assessor notes (optional)</p><textarea id="review-notes" class="review-textarea compact fit-content" placeholder="E.g. Verified against NF F31-054 source document."></textarea></div>
-            <div class="review-actions">
-              <button class="btn btn-accent" id="approve-btn"><svg><use href="#i-thumbs-up"/></svg> Approve</button>
-              <button class="btn btn-danger" id="reject-btn"><svg><use href="#i-thumbs-down"/></svg> Reject</button>
-            </div>
+            <div class="review-actions"><button class="btn btn-accent" id="approve-btn"><svg><use href="#i-thumbs-up"/></svg> Approve</button><button class="btn btn-danger" id="reject-btn"><svg><use href="#i-thumbs-down"/></svg> Reject</button></div>
             <div class="record-export" id="record-export"><span id="record-export-msg">Audit record generated.</span><div class="record-actions"><button class="btn btn-outline btn-sm" id="download-record-btn">Download audit PDF</button><button class="btn btn-primary btn-sm" id="new-analysis-btn">New analysis</button></div></div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="step" id="session-dashboard" style="margin-bottom:24px;">
-      <div class="step-head" style="margin-bottom:20px;">
-        <div><h2 class="step-title">Session dashboard</h2><p class="step-desc">Audit stats and query history for this session.</p></div>
-      </div>
+    <section class="step" id="session-dashboard">
+      <div class="step-head"><div><h2 class="step-title">Session dashboard</h2><p class="step-desc">Audit stats and query history for this session.</p></div></div>
       <div class="audit-stats">
         <div class="stat"><span class="stat-num ok" id="stat-approved">0</span><span class="stat-lab">Approved</span></div>
         <div class="stat"><span class="stat-num bad" id="stat-rejected">0</span><span class="stat-lab">Rejected</span></div>
@@ -507,59 +114,39 @@
         <div class="stat"><span class="stat-num ok" id="stat-time-saved">0h 0min</span><span class="stat-lab">Estimated time saved</span></div>
       </div>
       <p class="field-lab">Recent audit log</p>
-      <input type="text" id="audit-search" placeholder="Search queries…" style="width:100%; padding:7px 12px; border-radius:8px; border:1px solid var(--border); background:var(--background); font-family:inherit; font-size:12px; color:var(--foreground); outline:none; margin-bottom:8px; box-sizing:border-box;">
-      <ul class="audit-log" id="audit-log"><li style="color:var(--muted-foreground); font-style:italic; border:none">No entries yet.</li></ul>
+      <input type="text" id="audit-search" class="audit-search" placeholder="Search queries…">
+      <ul class="audit-log" id="audit-log"><li style="color:var(--muted-foreground);font-style:italic;border:none">No entries yet.</li></ul>
     </section>
   </div>
 </main>
 
-<footer style="zoom:1.1;">
+<footer class="footer-large">
   <div class="container">
     <div class="footer-row">
-      <a href="index.html" class="brand"><img src="logo_images/trackmind_logo2.png" alt="TrackMind logo" style="width:140px;height:auto;max-width:140px;object-fit:contain;display:block;"></a>
+      <a href="index.html" class="brand"><img src="logo_images/trackmind_logo2.png" alt="TrackMind logo" class="footer-logo"></a>
       <div class="footer-links"><a href="index.html#problem">Challenge</a><a href="index.html#solution">How it works</a><a href="index.html#impact">Impact</a><a href="index.html#moat">Why TrackMind</a><a href="demo.html">Demo</a></div>
     </div>
-    <div class="footer-meta">
-      <p>© 2026 TrackMind · AI-powered compliance intelligence for European railway certification.</p>
-      <p>AI drafts only. Final compliance positions require assessor approval.</p>
-    </div>
+    <div class="footer-meta"><p>© 2026 TrackMind · AI-powered compliance intelligence for European railway certification.</p><p>AI drafts only. Final compliance positions require assessor approval.</p></div>
   </div>
 </footer>
 
-<div id="history-modal" style="display:none; position:fixed; inset:0; z-index:200; background:rgba(14,37,71,.45); backdrop-filter:blur(4px); padding:24px; overflow-y:auto;">
-  <div style="max-width:820px; margin:40px auto; background:var(--card); border-radius:24px; border:1px solid var(--border); box-shadow:var(--shadow-elevated); padding:32px; position:relative;">
-    <button onclick="document.getElementById('history-modal').style.display='none'" style="position:absolute; top:16px; right:16px; background:var(--muted); border:none; border-radius:50%; width:32px; height:32px; cursor:pointer; font-size:16px; color:var(--muted-foreground);">✕</button>
-    <p class="eyebrow" style="margin-bottom:8px">Audit history</p>
-    <p id="hm-query" style="font-size:15px; font-weight:600; margin:0 0 20px; color:var(--foreground);"></p>
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
-      <span id="hm-verdict" class="verdict-pill"></span>
-      <span id="hm-conf" class="conf-pill" style="gap:6px;">
-      <span style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; opacity:.7;">Confidence</span>
-      <span id="hm-conf-pct"></span>
-    </span>
-      <span id="hm-decision" style="display:inline-flex; align-items:center; padding:5px 12px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.08em; border:1px solid currentColor;"></span>
-    </div>
-    <p class="field-lab">Explanation</p>
-    <div id="hm-explanation" class="field-text numbered" style="margin-bottom:16px;"></div>
-    <p class="field-lab">Recommended action</p>
-    <div id="hm-action" class="field-text numbered" style="margin-bottom:16px;"></div>
-    <div id="hm-notes-block" style="display:none;">
-      <p class="field-lab">Assessor notes</p>
-      <div id="hm-notes" class="field-text" style="margin-bottom:16px;"></div>
-    </div>
-    <p class="field-lab">Citations</p>
-    <div id="hm-citations" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-    <div style="display:flex; justify-content:flex-end; margin-top:24px;">
-      <button class="btn btn-primary btn-sm" id="hm-edit-btn">Edit</button>
-    </div>
+<div id="history-modal" class="modal">
+  <div class="modal-card">
+    <button onclick="document.getElementById('history-modal').style.display='none'" class="modal-close">✕</button>
+    <p class="eyebrow">Audit history</p>
+    <p id="hm-query" class="modal-query"></p>
+    <div class="modal-badges"><span id="hm-verdict" class="verdict-pill"></span><span id="hm-conf" class="conf-pill" style="gap:6px;"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;opacity:.7;">Confidence</span><span id="hm-conf-pct"></span></span><span id="hm-decision" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.08em;border:1px solid currentColor;"></span></div>
+    <p class="field-lab">Explanation</p><div id="hm-explanation" class="field-text numbered" style="margin-bottom:16px;"></div>
+    <p class="field-lab">Recommended action</p><div id="hm-action" class="field-text numbered" style="margin-bottom:16px;"></div>
+    <div id="hm-notes-block" class="modal-notes"><p class="field-lab">Assessor notes</p><div id="hm-notes" class="field-text" style="margin-bottom:16px;"></div></div>
+    <p class="field-lab">Citations</p><div id="hm-citations" class="modal-citations"></div>
+    <div class="modal-actions"><button class="btn btn-primary btn-sm" id="hm-edit-btn">Edit</button></div>
   </div>
 </div>
 
 <div class="toast" id="toast"><svg><use href="#i-check"/></svg><span id="toast-msg"></span></div>
 
 <script>
-  // Same-origin when served by FastAPI; localhost:8000 fallback when opened from file
-  // or from a separate static dev server.
   const API_BASE = (() => {
     const fallback = 'http://localhost:8000';
     if (window.location.protocol === 'file:') return fallback;
@@ -568,266 +155,74 @@
     return window.location.origin || fallback;
   })();
 
-  // Live API is the default.
-  // The navbar buttons control whether /analyse receives mock:false or mock:true.
-  let MOCK_MODE = false;
-  let API_AVAILABLE = false;
-  let lastVerdict = null;
-  let lastQuery = '';
-  const ASSESSOR_ID = 'NoBo-Assessor-001';
-  let latestRecordUrl = null;
-  let latestRecordName = '';
-  let editingHistoryQuery = null;
-  const sessionHistory = {};
-
-  const sessionStats = { approved: 0, rejected: 0, pending: 0 };
-
-  const $ = id => document.getElementById(id);
+  let MOCK_MODE = false, API_AVAILABLE = false, lastVerdict = null, lastQuery = '', latestRecordUrl = null, latestRecordName = '', editingHistoryQuery = null;
+  const ASSESSOR_ID = 'NoBo-Assessor-001', sessionHistory = {}, sessionStats = { approved: 0, rejected: 0, pending: 0 }, $ = id => document.getElementById(id);
 
   function setStatus(state) {
-    const live = $('btn-live');
-    const mock = $('btn-mock');
-
+    const live = $('btn-live'), mock = $('btn-mock');
     if (!live || !mock) return;
-
-    if (state === 'live') {
-      live.classList.remove('inactive');
-      mock.classList.add('inactive');
-      live.classList.remove('status-down');
-      mock.classList.remove('status-down');
-    } else if (state === 'mock') {
-      mock.classList.remove('inactive');
-      live.classList.add('inactive');
-      live.classList.remove('status-down');
-      mock.classList.remove('status-down');
-    } else {
-      live.classList.add('inactive');
-      mock.classList.add('inactive');
-      live.classList.add('status-down');
-      mock.classList.add('status-down');
-    }
+    if (state === 'live') { live.classList.remove('inactive'); mock.classList.add('inactive'); live.classList.remove('status-down'); mock.classList.remove('status-down'); }
+    else if (state === 'mock') { mock.classList.remove('inactive'); live.classList.add('inactive'); live.classList.remove('status-down'); mock.classList.remove('status-down'); }
+    else { live.classList.add('inactive', 'status-down'); mock.classList.add('inactive', 'status-down'); }
   }
 
-  function applyMode(mode) {
-    const selectedMode = mode === 'mock' ? 'mock' : 'live';
-
-    MOCK_MODE = selectedMode === 'mock';
-    setStatus(selectedMode);
-  }
-
-  function setMode(mode) {
-    const selectedMode = mode === 'mock' ? 'mock' : 'live';
-    const currentMode = MOCK_MODE ? 'mock' : 'live';
-
-    // If the user clicks the mode already selected, do nothing.
-    if (selectedMode === currentMode) return;
-
-    // Save the selected mode so after refresh the page opens in the right mode.
-    localStorage.setItem('trackmind_mode', selectedMode);
-
-    // Full refresh to clear upload, query, results and review state.
-    window.location.reload();
-  }
-
-  function initMode() {
-    const savedMode = localStorage.getItem('trackmind_mode') === 'mock'
-      ? 'mock'
-      : 'live';
-
-    applyMode(savedMode);
-  }
+  function applyMode(mode) { const selectedMode = mode === 'mock' ? 'mock' : 'live'; MOCK_MODE = selectedMode === 'mock'; setStatus(selectedMode); }
+  function setMode(mode) { const selectedMode = mode === 'mock' ? 'mock' : 'live', currentMode = MOCK_MODE ? 'mock' : 'live'; if (selectedMode === currentMode) return; localStorage.setItem('trackmind_mode', selectedMode); window.location.reload(); }
+  function initMode() { applyMode(localStorage.getItem('trackmind_mode') === 'mock' ? 'mock' : 'live'); }
 
   async function checkBackend() {
-    try {
-      const r = await fetch(`${API_BASE}/health`);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-
-      const health = await r.json();
-      API_AVAILABLE = true;
-
-      // Do not let the backend choose the UI mode.
-      // The UI mode is controlled only by the navbar buttons.
-      setStatus(MOCK_MODE ? 'mock' : 'live');
-
-      return health;
-    } catch (e) {
-      API_AVAILABLE = false;
-      setStatus('down');
-      return null;
-    }
+    try { const r = await fetch(`${API_BASE}/health`); if (!r.ok) throw new Error(`HTTP ${r.status}`); const health = await r.json(); API_AVAILABLE = true; setStatus(MOCK_MODE ? 'mock' : 'live'); return health; }
+    catch (e) { API_AVAILABLE = false; setStatus('down'); return null; }
   }
 
   function normaliseApiResponse(raw, query) {
     const retrieval = raw.retrieval || {};
-
     const mapSource = (key, fallbackLang) => {
-      const src = retrieval[key] || {};
-      const lang = (src.lang || fallbackLang || 'EN').toUpperCase();
-      return (src.chunks || []).map((c, i) => ({
-        source: key,
-        src: c.article || `${key.toUpperCase()}-${i + 1}`,
-        lang,
-        distance: typeof c.distance === 'number' ? c.distance : null,
-        score: typeof c.distance === 'number' ? 1 - c.distance : null,
-        text: c.text || '',
-      }));
+      const src = retrieval[key] || {}, lang = (src.lang || fallbackLang || 'EN').toUpperCase();
+      return (src.chunks || []).map((c, i) => ({ source: key, src: c.article || `${key.toUpperCase()}-${i + 1}`, lang, distance: typeof c.distance === 'number' ? c.distance : null, score: typeof c.distance === 'number' ? 1 - c.distance : null, text: c.text || '' }));
     };
-
-    const confidencePct = Number.isFinite(Number(raw.confidence_pct)) ? Number(raw.confidence_pct) : 0;
-    const tier = (raw.confidence_tier || 'AMBER').toUpperCase();
-
-    return {
-      query,
-      verdict: raw.verdict || 'INSUFFICIENT DATA',
-      explanation: raw.explanation || '',
-      recommended_action: raw.recommended_action || '',
-      action: raw.recommended_action || '',
-      confidence_tier: tier,
-      tier: tier.toLowerCase(),
-      confidence_pct: confidencePct,
-      confidence: confidencePct / 100,
-      confidence_reason: raw.confidence_reason || '',
-      citations: Array.isArray(raw.citations) ? raw.citations : [],
-      raw_response: raw.raw_response || '',
-      allow_draft: typeof raw.allow_draft === 'boolean' ? raw.allow_draft : tier !== 'RED',
-      gate_message: raw.gate_message || '',
-      retrieval,
-      chunksBySource: {
-        tsi: mapSource('tsi', 'EN'),
-        nntr: mapSource('nntr', 'FR'),
-        spec: mapSource('spec', 'EN'),
-      },
-      tsi_top: raw.tsi_top || '',
-      nntr_top: raw.nntr_top || '',
-      spec_top: raw.spec_top || '',
-      raw,
-    };
+    const confidencePct = Number.isFinite(Number(raw.confidence_pct)) ? Number(raw.confidence_pct) : 0, tier = (raw.confidence_tier || 'AMBER').toUpperCase();
+    return { query, verdict: raw.verdict || 'INSUFFICIENT DATA', explanation: raw.explanation || '', recommended_action: raw.recommended_action || '', action: raw.recommended_action || '', confidence_tier: tier, tier: tier.toLowerCase(), confidence_pct: confidencePct, confidence: confidencePct / 100, confidence_reason: raw.confidence_reason || '', citations: Array.isArray(raw.citations) ? raw.citations : [], raw_response: raw.raw_response || '', allow_draft: typeof raw.allow_draft === 'boolean' ? raw.allow_draft : tier !== 'RED', gate_message: raw.gate_message || '', retrieval, chunksBySource: { tsi: mapSource('tsi', 'EN'), nntr: mapSource('nntr', 'FR'), spec: mapSource('spec', 'EN') }, tsi_top: raw.tsi_top || '', nntr_top: raw.nntr_top || '', spec_top: raw.spec_top || '', raw };
   }
 
   async function analyse(query) {
-    if (!API_AVAILABLE) {
-      await checkBackend();
-    }
-
-    if (!API_AVAILABLE) {
-      throw new Error('Backend unavailable. Start FastAPI with: uvicorn api:app --reload --port 8000');
-    }
-
-    const r = await fetch(`${API_BASE}/analyse`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: query,
-        n_chunks: 5,
-        mock: MOCK_MODE
-      })
-    });
-
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({}));
-      throw new Error(err.detail || 'Analysis failed.');
-    }
-
-    const raw = await r.json();
-
-    return normaliseApiResponse(raw, query);
+    if (!API_AVAILABLE) await checkBackend();
+    if (!API_AVAILABLE) throw new Error('Backend unavailable. Start FastAPI with: uvicorn api:app --reload --port 8000');
+    const r = await fetch(`${API_BASE}/analyse`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, n_chunks: 5, mock: MOCK_MODE }) });
+    if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err.detail || 'Analysis failed.'); }
+    return normaliseApiResponse(await r.json(), query);
   }
 
   async function postDecision(finalDecision, notes, editedExplanation, editedAction) {
     if (!lastVerdict) throw new Error('Run an analysis first.');
-
     const includeEdits = finalDecision === 'APPROVED';
-    const payload = {
-      query_text: lastQuery,
-      verdict: lastVerdict.verdict,
-      explanation: lastVerdict.explanation,
-      recommended_action: lastVerdict.recommended_action,
-      confidence_tier: lastVerdict.confidence_tier,
-      confidence_pct: lastVerdict.confidence_pct,
-      confidence_reason: lastVerdict.confidence_reason,
-      citations: lastVerdict.citations,
-      raw_response: lastVerdict.raw_response,
-      tsi_top: lastVerdict.tsi_top,
-      nntr_top: lastVerdict.nntr_top,
-      spec_top: lastVerdict.spec_top,
-      assessor_id: ASSESSOR_ID,
-      decision: finalDecision,
-      notes: notes || '',
-      edited_explanation: includeEdits ? editedExplanation : '',
-      edited_action: includeEdits ? editedAction : '',
-      mock: MOCK_MODE,
-    };
-
-    const r = await fetch(`${API_BASE}/decide`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!r.ok) {
-      let detail = '';
-      try { detail = (await r.json()).detail || ''; } catch (_) {}
-      throw new Error(detail || `Decision logging failed with HTTP ${r.status}`);
-    }
-
+    const payload = { query_text: lastQuery, verdict: lastVerdict.verdict, explanation: lastVerdict.explanation, recommended_action: lastVerdict.recommended_action, confidence_tier: lastVerdict.confidence_tier, confidence_pct: lastVerdict.confidence_pct, confidence_reason: lastVerdict.confidence_reason, citations: lastVerdict.citations, raw_response: lastVerdict.raw_response, tsi_top: lastVerdict.tsi_top, nntr_top: lastVerdict.nntr_top, spec_top: lastVerdict.spec_top, assessor_id: ASSESSOR_ID, decision: finalDecision, notes: notes || '', edited_explanation: includeEdits ? editedExplanation : '', edited_action: includeEdits ? editedAction : '', mock: MOCK_MODE };
+    const r = await fetch(`${API_BASE}/decide`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!r.ok) { let detail = ''; try { detail = (await r.json()).detail || ''; } catch (_) {} throw new Error(detail || `Decision logging failed with HTTP ${r.status}`); }
     return r.json();
   }
 
-  async function loadAuditStats() {
-    $('stat-approved').textContent = sessionStats.approved;
-    $('stat-rejected').textContent = sessionStats.rejected;
-    $('stat-pending').textContent = sessionStats.pending;
-    $('stat-time-saved').textContent = formatTimeSaved();
-  }
-
-  function formatTimeSaved() {
-    const entries = Object.values(sessionHistory);
-    const manualMs = entries.length * 4 * 60 * 60 * 1000;
-    const realMs = entries.reduce((sum, entry) => sum + (entry._query_ms || 0), 0);
-    const savedMinutes = Math.max(0, Math.round((manualMs - realMs) / 60000));
-    const hours = Math.floor(savedMinutes / 60);
-    const minutes = savedMinutes % 60;
-    return `${hours}h ${minutes}min`;
-  }
+  async function loadAuditStats() { $('stat-approved').textContent = sessionStats.approved; $('stat-rejected').textContent = sessionStats.rejected; $('stat-pending').textContent = sessionStats.pending; $('stat-time-saved').textContent = formatTimeSaved(); }
+  function formatTimeSaved() { const entries = Object.values(sessionHistory), manualMs = entries.length * 4 * 60 * 60 * 1000, realMs = entries.reduce((sum, entry) => sum + (entry._query_ms || 0), 0), savedMinutes = Math.max(0, Math.round((manualMs - realMs) / 60000)); return `${Math.floor(savedMinutes / 60)}h ${savedMinutes % 60}min`; }
 
   function rebuildAuditLog() {
-    const ul = $('audit-log');
-    ul.innerHTML = '';
-
+    const ul = $('audit-log'); ul.innerHTML = '';
     const sessionEntries = Object.values(sessionHistory);
-    if (!sessionEntries.length) {
-      ul.innerHTML = '<li style="color:var(--muted-foreground); font-style:italic; border:none">No entries yet.</li>';
-      return;
-    }
-
+    if (!sessionEntries.length) { ul.innerHTML = '<li style="color:var(--muted-foreground);font-style:italic;border:none">No entries yet.</li>'; return; }
     sessionEntries.slice().reverse().forEach(d => {
-      const review = d._review;
-      const decision = review ? review.decision : 'PENDING';
-      const dotCls = decision === 'REJECTED' ? 'red' : decision === 'APPROVED' ? 'green' : 'amber';
+      const review = d._review, decision = review ? review.decision : 'PENDING', dotCls = decision === 'REJECTED' ? 'red' : decision === 'APPROVED' ? 'green' : 'amber';
       const li = document.createElement('li');
-      li.style.cursor = 'pointer';
-      li.style.borderRadius = '6px';
-      li.style.transition = 'background .15s';
-      li.title = 'Click to view full analysis';
-      li.addEventListener('click', () => openHistoryModal(d.query));
-      li.addEventListener('mouseenter', () => li.style.background = 'rgba(76,175,59,.07)');
-      li.addEventListener('mouseleave', () => li.style.background = '');
-      const badgeStyle = decision === 'APPROVED'
-        ? 'color:#166534; background:rgba(76,175,59,.12); border:1px solid rgba(76,175,59,.28);'
-        : decision === 'REJECTED'
-          ? 'color:#991b1b; background:rgba(224,71,62,.08); border:1px solid rgba(224,71,62,.24);'
-          : 'color:#92400e; background:rgba(245,165,36,.14); border:1px solid rgba(245,165,36,.34);';
-      const decisionBadge = `<span style="font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; margin-left:4px; ${badgeStyle}">${decision}</span>`;
-      li.innerHTML = `<span class="audit-dot ${dotCls}"></span><span class="audit-q">${escapeHtml(d.query)}</span>${decisionBadge}`;
+      li.style.cursor = 'pointer'; li.style.borderRadius = '6px'; li.style.transition = 'background .15s'; li.title = 'Click to view full analysis';
+      li.addEventListener('click', () => openHistoryModal(d.query)); li.addEventListener('mouseenter', () => li.style.background = 'rgba(76,175,59,.07)'); li.addEventListener('mouseleave', () => li.style.background = '');
+      const badgeStyle = decision === 'APPROVED' ? 'color:#166534;background:rgba(76,175,59,.12);border:1px solid rgba(76,175,59,.28);' : decision === 'REJECTED' ? 'color:#991b1b;background:rgba(224,71,62,.08);border:1px solid rgba(224,71,62,.24);' : 'color:#92400e;background:rgba(245,165,36,.14);border:1px solid rgba(245,165,36,.34);';
+      li.innerHTML = `<span class="audit-dot ${dotCls}"></span><span class="audit-q">${escapeHtml(d.query)}</span><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;margin-left:4px;${badgeStyle}">${decision}</span>`;
       ul.appendChild(li);
     });
   }
 
-  async function loadAuditLog() {
-    rebuildAuditLog();
-  }
+  async function loadAuditLog() { rebuildAuditLog(); }
 
-  const dz = $('dropzone'), fi = $('file-input');
+  const dz = $('dropzone'), fi = $('file-input'), qInput = $('query'), aBtn = $('analyse-btn');
   dz.addEventListener('click', () => fi.click());
   ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
   ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
@@ -837,224 +232,91 @@
 
   function handleFile(file) {
     if (file.type !== 'application/pdf') { toast('Only PDF files are supported.', 'error'); return; }
-    $('file-name').textContent = file.name;
-    $('file-size').textContent = 'specification documentation loaded';
-    $('uploaded').classList.add('active'); dz.style.display='none'; $('step1-num').classList.add('done');
-    toast('Spec upload visual ready', 'success');
+    $('file-name').textContent = file.name; $('file-size').textContent = 'specification documentation loaded'; $('uploaded').classList.add('active'); dz.style.display='none'; $('step1-num').classList.add('done'); toast('Spec upload visual ready', 'success');
   }
 
-  const qInput = $('query'), aBtn = $('analyse-btn');
   qInput.addEventListener('input', () => { aBtn.disabled = !qInput.value.trim(); });
   qInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (qInput.value.trim()) runAnalysis(); } });
-  document.querySelectorAll('.chip').forEach(c => { c.addEventListener('click', () => { qInput.value = c.dataset.q; aBtn.disabled = false; qInput.focus(); }); });
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => { qInput.value = c.dataset.q; aBtn.disabled = false; qInput.focus(); }));
   $('clear-btn').addEventListener('click', () => { qInput.value=''; aBtn.disabled = true; });
   aBtn.addEventListener('click', runAnalysis);
 
   async function runAnalysis() {
-    const q = qInput.value.trim();
-    if (!q) return;
-
-    lastQuery = q;
-    editingHistoryQuery = null;
-
-    $('results-empty').style.display = 'none';
-    $('results').classList.remove('active');
-    $('results-loading').classList.add('active');
-    $('record-export').classList.remove('active');
-
-    aBtn.disabled = true;
-    aBtn.innerHTML = 'Analysing… <svg><use href="#i-sparkles"/></svg>';
-    $('step2-num').classList.add('done');
-    const queryStart = Date.now();
-
-    $('step-3').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    try {
-      const data = await analyse(q);
-
-      await new Promise(r => setTimeout(r, 600));
-
-      const queryMs = Date.now() - queryStart;
-      const querySec = (queryMs / 1000).toFixed(1);
-      $('results-loading').classList.remove('active');
-      await renderResults(data, querySec);
-      $('step3-num').classList.add('done');
-    } catch (e) {
-      $('results-loading').classList.remove('active');
-      $('results-empty').style.display = 'block';
-      toast(e.message || 'Analysis failed.', 'error');
-    } finally {
-      aBtn.disabled = false;
-      aBtn.innerHTML = 'Analyse <svg><use href="#i-sparkles"/></svg>';
-    }
+    const q = qInput.value.trim(); if (!q) return;
+    lastQuery = q; editingHistoryQuery = null; $('results-empty').style.display = 'none'; $('results').classList.remove('active'); $('results-loading').classList.add('active'); $('record-export').classList.remove('active');
+    aBtn.disabled = true; aBtn.innerHTML = 'Analysing… <svg><use href="#i-sparkles"/></svg>'; $('step2-num').classList.add('done');
+    const queryStart = Date.now(); $('step-3').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try { const data = await analyse(q); await new Promise(r => setTimeout(r, 600)); const querySec = ((Date.now() - queryStart) / 1000).toFixed(1); $('results-loading').classList.remove('active'); await renderResults(data, querySec); $('step3-num').classList.add('done'); }
+    catch (e) { $('results-loading').classList.remove('active'); $('results-empty').style.display = 'block'; toast(e.message || 'Analysis failed.', 'error'); }
+    finally { aBtn.disabled = false; aBtn.innerHTML = 'Analyse <svg><use href="#i-sparkles"/></svg>'; }
   }
 
   async function renderResults(data, querySec, options = {}) {
-    const editMode = Boolean(options.editMode);
-    lastVerdict = data;
-
+    const editMode = Boolean(options.editMode); lastVerdict = data;
     ['tsi','nntr','spec'].forEach(key => {
-      const el = $('chunks-' + key + '-inner');
-      el.innerHTML = '';
-      const chunks = data.chunksBySource?.[key] || [];
-      const sourceInfo = data.retrieval?.[key] || {};
-
-      if (sourceInfo.empty) {
-        el.innerHTML = '<div style="font-size:12px;color:var(--muted-foreground);padding:4px 0">Collection empty — run ingestion first.</div>';
-        return;
-      }
-      if (!chunks.length) {
-        el.innerHTML = '<div style="font-size:12px;color:var(--muted-foreground);padding:4px 0">No chunks retrieved.</div>';
-        return;
-      }
+      const el = $('chunks-' + key + '-inner'); el.innerHTML = '';
+      const chunks = data.chunksBySource?.[key] || [], sourceInfo = data.retrieval?.[key] || {};
+      if (sourceInfo.empty) { el.innerHTML = '<div style="font-size:12px;color:var(--muted-foreground);padding:4px 0">Collection empty — run ingestion first.</div>'; return; }
+      if (!chunks.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted-foreground);padding:4px 0">No chunks retrieved.</div>'; return; }
 
       const makeChunk = (c, i) => {
-        const det = document.createElement('details');
-        det.className = `chunk ${key}`;
-        det.open = i === 0;
+        const det = document.createElement('details'); det.className = `chunk ${key}`; det.open = i === 0;
         det.innerHTML = `<summary><span class="chunk-ref ${key}">[${key.toUpperCase()}-${i + 1}]</span><span class="chunk-src">${escapeHtml(c.src)}</span><span class="chunk-meta"><span class="lang-badge ${(c.lang||'EN').toLowerCase()}">${escapeHtml(c.lang||'EN')}</span><svg class="chevron"><use href="#i-chevron-right"/></svg></span></summary><p class="chunk-text">${escapeHtml(c.text||'')}</p>`;
         return det;
       };
 
       chunks.slice(0, 3).forEach((c, i) => el.appendChild(makeChunk(c, i)));
-
       if (chunks.length > 3) {
-        const extraWrap = document.createElement('div');
-        extraWrap.style.display = 'none';
-        chunks.slice(3).forEach((c, i) => extraWrap.appendChild(makeChunk(c, i + 3)));
-        const btn = document.createElement('button');
-        btn.className = 'show-more-chunks';
-        btn.textContent = `Show ${chunks.length - 3} more evidence items`;
-        btn.addEventListener('click', () => {
-          const isOpen = extraWrap.style.display !== 'none';
-          extraWrap.style.display = isOpen ? 'none' : 'block';
-          btn.textContent = isOpen ? `Show ${chunks.length - 3} more evidence items` : 'Show less evidence items';
-        });
-        el.appendChild(extraWrap);
-        el.appendChild(btn);
+        const extraWrap = document.createElement('div'); extraWrap.style.display = 'none'; chunks.slice(3).forEach((c, i) => extraWrap.appendChild(makeChunk(c, i + 3)));
+        const btn = document.createElement('button'); btn.className = 'show-more-chunks'; btn.textContent = `Show ${chunks.length - 3} more evidence items`;
+        btn.addEventListener('click', () => { const isOpen = extraWrap.style.display !== 'none'; extraWrap.style.display = isOpen ? 'none' : 'block'; btn.textContent = isOpen ? `Show ${chunks.length - 3} more evidence items` : 'Show less evidence items'; });
+        el.appendChild(extraWrap); el.appendChild(btn);
       }
     });
 
-    const verdict = data.verdict || '';
-    const pill = $('verdict-pill');
-    pill.className = 'verdict-pill';
-    if (verdict === 'CONFLICT DETECTED') pill.classList.add('conflict');
-    else if (verdict === 'COMPLIANT') pill.classList.add('compliant');
-    else pill.classList.add('insufficient');
+    const verdict = data.verdict || '', pill = $('verdict-pill'); pill.className = 'verdict-pill';
+    if (verdict === 'CONFLICT DETECTED') pill.classList.add('conflict'); else if (verdict === 'COMPLIANT') pill.classList.add('compliant'); else pill.classList.add('insufficient');
+    $('verdict-label').textContent = verdict || '—'; document.querySelectorAll('.analysis-time').forEach(el => el.remove());
+    if (querySec) { const timeEl = document.createElement('span'); timeEl.className = 'analysis-time'; timeEl.innerHTML = `<span class="analysis-time-label">Analysis time</span><span class="analysis-time-value">${escapeHtml(querySec)}s</span>`; $('analysis-time-slot').appendChild(timeEl); }
 
-    $('verdict-label').textContent = verdict || '—';
-    document.querySelectorAll('.analysis-time').forEach(el => el.remove());
-    if (querySec) {
-      const timeEl = document.createElement('span');
-      timeEl.className = 'analysis-time';
-      timeEl.innerHTML = `<span class="analysis-time-label">Analysis time</span><span class="analysis-time-value">${escapeHtml(querySec)}s</span>`;
-      $('analysis-time-slot').appendChild(timeEl);
-    }
-    const pct = Math.max(0, Math.min(100, Number(data.confidence_pct || 0)));
-    const tier = String(data.confidence_tier || (pct < 40 ? 'RED' : pct < 70 ? 'AMBER' : 'GREEN')).toUpperCase();
-    const confClass = tier === 'RED' ? 'low' : tier === 'GREEN' ? 'high' : 'mid';
-    $('conf-num').className = `conf-pill ${confClass}`;
-    $('conf-num').textContent = `${Math.round(pct)}% · ${tier}`;
-    $('conf-reason').textContent = data.confidence_reason ? `Reason: ${data.confidence_reason}` : '';
-    $('explanation').innerHTML = formatNumberedHtml(data.explanation);
-    $('action').innerHTML = formatNumberedHtml(data.recommended_action);
+    const pct = Math.max(0, Math.min(100, Number(data.confidence_pct || 0))), tier = String(data.confidence_tier || (pct < 40 ? 'RED' : pct < 70 ? 'AMBER' : 'GREEN')).toUpperCase(), confClass = tier === 'RED' ? 'low' : tier === 'GREEN' ? 'high' : 'mid';
+    $('conf-num').className = `conf-pill ${confClass}`; $('conf-num').textContent = `${Math.round(pct)}% · ${tier}`; $('conf-reason').textContent = data.confidence_reason ? `Reason: ${data.confidence_reason}` : '';
+    $('explanation').innerHTML = formatNumberedHtml(data.explanation); $('action').innerHTML = formatNumberedHtml(data.recommended_action);
 
-    const citations = data.citations || [];
+    const citations = data.citations || [], groupedCitations = { tsi: [], nntr: [], spec: [] };
+    citations.forEach(citation => groupedCitations[classifyCitation(citation)].push(citation));
 
-    function classifyCitation(citation) {
-      const c = String(citation).toLowerCase();
+    if (citations.length) { $('citations-block').style.display = 'block'; renderCitationGroup('tsi', groupedCitations.tsi); renderCitationGroup('nntr', groupedCitations.nntr); renderCitationGroup('spec', groupedCitations.spec); }
+    else { $('citations-block').style.display = 'none'; renderCitationGroup('tsi', []); renderCitationGroup('nntr', []); renderCitationGroup('spec', []); }
 
-      if (
-        c.includes('tsi') ||
-        c.includes('loc&pas') ||
-        c.includes('loc pas') ||
-        c.includes('1302/2014')
-      ) {
-        return 'tsi';
-      }
-
-      if (
-        c.includes('arrêté') ||
-        c.includes('arrete') ||
-        c.includes('article') ||
-        c.includes('nntr') ||
-        c.includes('national rule') ||
-        c.includes('french') ||
-        c.includes('rfn')
-      ) {
-        return 'nntr';
-      }
-
-      if (
-        c.includes('iberrail') ||
-        c.includes('ib-emu') ||
-        c.includes('spec') ||
-        c.includes('technical specification')
-      ) {
-        return 'spec';
-      }
-
-      return 'spec';
-    }
-
-    function renderCitationGroup(key, items) {
-      const group = $(`citations-${key}-group`);
-      const container = $(`citations-${key}`);
-
-      container.innerHTML = '';
-
-      if (!items.length) {
-        group.style.display = 'none';
-        return;
-      }
-
-      group.style.display = 'block';
-
-      const citationPrefixes = { tsi: '[TSI]', nntr: '[NNTR]', spec: '[SPEC]' };
-      items.forEach(citation => { const chip = document.createElement('span'); chip.className = `citation-chip ${key}`; chip.textContent = `${citationPrefixes[key]} ${citation}`; container.appendChild(chip); });
-    }
-
-    const groupedCitations = {
-      tsi: [],
-      nntr: [],
-      spec: [],
-    };
-
-    citations.forEach(citation => {
-      groupedCitations[classifyCitation(citation)].push(citation);
-    });
-
-    if (citations.length) {
-      $('citations-block').style.display = 'block';
-      renderCitationGroup('tsi', groupedCitations.tsi);
-      renderCitationGroup('nntr', groupedCitations.nntr);
-      renderCitationGroup('spec', groupedCitations.spec);
-    } else {
-      $('citations-block').style.display = 'none';
-      renderCitationGroup('tsi', []);
-      renderCitationGroup('nntr', []);
-      renderCitationGroup('spec', []);
-    }
-    const hadHistory = Boolean(sessionHistory[data.query]);
-    const existingReview = sessionHistory[data.query]?._review || null;
+    const hadHistory = Boolean(sessionHistory[data.query]), existingReview = sessionHistory[data.query]?._review || null;
     if (existingReview && !editMode) data._review = existingReview;
-
     $('review-explanation').value = formatNumberedPlain(editMode && existingReview ? existingReview.explanation : data.explanation);
     $('review-action').value = formatNumberedPlain(editMode && existingReview ? existingReview.action : data.recommended_action);
     $('review-notes').value = editMode && existingReview ? (existingReview.notes || '') : '';
-
-    // Same safety rule as Streamlit: RED / no-draft results cannot be approved.
     $('approve-btn').disabled = !data.allow_draft || (Boolean(existingReview) && !editMode);
     $('reject-btn').disabled = Boolean(existingReview) && !editMode;
 
-    $('results').classList.add('active');
-    data._query_ms = Number(querySec || 0) * 1000;
-    sessionHistory[data.query] = data;
+    $('results').classList.add('active'); data._query_ms = Number(querySec || 0) * 1000; sessionHistory[data.query] = data;
     if (!hadHistory) sessionStats.pending += 1;
-    loadAuditStats();
-    loadAuditLog();
-    requestAnimationFrame(fitModelTextareas);
-      }
+    loadAuditStats(); loadAuditLog(); requestAnimationFrame(fitModelTextareas);
+  }
+
+  function classifyCitation(citation) {
+    const c = String(citation).toLowerCase();
+    if (c.includes('tsi') || c.includes('loc&pas') || c.includes('loc pas') || c.includes('1302/2014')) return 'tsi';
+    if (c.includes('arrêté') || c.includes('arrete') || c.includes('article') || c.includes('nntr') || c.includes('national rule') || c.includes('french') || c.includes('rfn')) return 'nntr';
+    if (c.includes('iberrail') || c.includes('ib-emu') || c.includes('spec') || c.includes('technical specification')) return 'spec';
+    return 'spec';
+  }
+
+  function renderCitationGroup(key, items) {
+    const group = $(`citations-${key}-group`), container = $(`citations-${key}`); container.innerHTML = '';
+    if (!items.length) { group.style.display = 'none'; return; }
+    group.style.display = 'block';
+    const citationPrefixes = { tsi: '[TSI]', nntr: '[NNTR]', spec: '[SPEC]' };
+    items.forEach(citation => { const chip = document.createElement('span'); chip.className = `citation-chip ${key}`; chip.textContent = `${citationPrefixes[key]} ${citation}`; container.appendChild(chip); });
+  }
 
   $('approve-btn').addEventListener('click', () => decide('APPROVED'));
   $('reject-btn').addEventListener('click', () => decide(lastVerdict?.allow_draft ? 'REJECTED' : 'ESCALATED'));
@@ -1062,366 +324,104 @@
   $('new-analysis-btn').addEventListener('click', resetForNewAnalysis);
   $('hm-edit-btn').addEventListener('click', editHistoryQuery);
 
-
   async function decide(decision) {
     if (!lastVerdict) { toast('Run an analysis first.', 'error'); return; }
-    if (lastVerdict._review && !editingHistoryQuery) {
-      toast('This analysis has already been reviewed.', 'error');
-      return;
-    }
+    if (lastVerdict._review && !editingHistoryQuery) { toast('This analysis has already been reviewed.', 'error'); return; }
+    if (decision === 'APPROVED' && !lastVerdict.allow_draft) { toast('RED tier — no draft to approve. Escalate instead.', 'error'); return; }
 
-    if (decision === 'APPROVED' && !lastVerdict.allow_draft) {
-      toast('RED tier — no draft to approve. Escalate instead.', 'error');
-      return;
-    }
-
-    const finalDecision = !lastVerdict.allow_draft ? 'ESCALATED' : decision;
-    const assessorNotes = $('review-notes').value.trim();
-    const notes = assessorNotes || (finalDecision === 'ESCALATED' ? 'RED tier — insufficient evidence to draft' : '');
+    const finalDecision = !lastVerdict.allow_draft ? 'ESCALATED' : decision, assessorNotes = $('review-notes').value.trim(), notes = assessorNotes || (finalDecision === 'ESCALATED' ? 'RED tier — insufficient evidence to draft' : '');
 
     try {
-      const ids = await postDecision(
-        finalDecision,
-        notes,
-        $('review-explanation').value,
-        $('review-action').value,
-      );
-
+      const ids = await postDecision(finalDecision, notes, $('review-explanation').value, $('review-action').value);
       const previousReview = sessionHistory[lastQuery]?._review || null;
       if (previousReview?.decision === 'APPROVED' && sessionStats.approved > 0) sessionStats.approved -= 1;
       if (previousReview?.decision === 'REJECTED' && sessionStats.rejected > 0) sessionStats.rejected -= 1;
       if (!previousReview && sessionStats.pending > 0) sessionStats.pending -= 1;
-
       if (finalDecision === 'APPROVED') sessionStats.approved += 1;
       if (finalDecision === 'REJECTED') sessionStats.rejected += 1;
 
-      if (sessionHistory[lastQuery]) {
-        sessionHistory[lastQuery]._review = {
-          decision: finalDecision,
-          explanation: $('review-explanation').value,
-          action: $('review-action').value,
-          notes,
-        };
-        lastVerdict._review = sessionHistory[lastQuery]._review;
-      }
-      editingHistoryQuery = null;
-      $('approve-btn').disabled = true;
-      $('reject-btn').disabled = true;
+      if (sessionHistory[lastQuery]) { sessionHistory[lastQuery]._review = { decision: finalDecision, explanation: $('review-explanation').value, action: $('review-action').value, notes }; lastVerdict._review = sessionHistory[lastQuery]._review; }
+      editingHistoryQuery = null; $('approve-btn').disabled = true; $('reject-btn').disabled = true;
+      await loadAuditStats(); loadAuditLog(); await generateComplianceRecord(finalDecision, ids);
 
-      await loadAuditStats();
-      loadAuditLog();
-      await generateComplianceRecord(finalDecision, ids);
-
-      const label = finalDecision === 'APPROVED' ? 'Verdict approved & logged'
-                  : finalDecision === 'REJECTED' ? 'Verdict rejected & logged'
-                  : 'Escalation logged';
+      const label = finalDecision === 'APPROVED' ? 'Verdict approved & logged' : finalDecision === 'REJECTED' ? 'Verdict rejected & logged' : 'Escalation logged';
       toast(ids?.response_id ? `${label} · response_id=${ids.response_id}` : label, finalDecision === 'REJECTED' ? 'error' : 'success');
-    } catch (e) {
-      toast(e.message || 'Could not log decision.', 'error');
-    }
+    } catch (e) { toast(e.message || 'Could not log decision.', 'error'); }
   }
 
   async function generateComplianceRecord(decision, ids) {
     if (latestRecordUrl) URL.revokeObjectURL(latestRecordUrl);
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const safeDecision = String(decision || 'DECISION').toUpperCase(), stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-'), now = new Date(), assessorId = typeof ASSESSOR_ID !== 'undefined' ? ASSESSOR_ID : 'NoBo-Assessor-001';
+    const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight(), M = 42, CW = pageW - M * 2, FOOTER_H = 28, LH = 16;
+    let y = 0; doc.setLineHeightFactor(1.42);
 
-    const safeDecision = String(decision || 'DECISION').toUpperCase();
-    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    const now = new Date();
-    const assessorId = typeof ASSESSOR_ID !== 'undefined' ? ASSESSOR_ID : 'NoBo-Assessor-001';
+    const C = { navy:[14,37,71], green:[76,175,59], red:[192,57,43], amber:[217,119,6], text:[26,26,46], muted:[107,114,128], rule:[229,231,235], soft:[249,250,251], white:[255,255,255], navylt:[148,175,201] };
+    const clean = v => String(v || '').replace(/[""]/g, '"').replace(/['']/g, "'").replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/[–—]/g, '-').replace(/·/g, '-').replace(/\u00a0/g, ' ').trim();
+    const st = (size, style, color) => { doc.setFont('helvetica', style || 'normal'); doc.setFontSize(size); doc.setTextColor(...(color || C.text)); };
 
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const M = 42;
-    const CW = pageW - M * 2;
-    const FOOTER_H = 28;
-    const LH = 16;
-    const PARAGRAPH_GAP = 14;
-    const ITEM_GAP = 9;
-    let y = 0;
-    doc.setLineHeightFactor(1.42);
+    function ensure(need) { if (y + need > pageH - FOOTER_H - 10) { drawFooter(); doc.addPage(); y = 0; drawContHeader(); } }
+    function drawFooter() { doc.setDrawColor(...C.rule); doc.setLineWidth(0.5); doc.line(M, pageH - FOOTER_H, M + CW, pageH - FOOTER_H); st(7, 'normal', C.muted); doc.text('TrackMind AI prototype - AI draft only. Final compliance positions require assessor approval.', M, pageH - FOOTER_H + 12); }
+    function drawContHeader() { st(7.5, 'bold', C.navy); doc.text('TrackMind AI · Audit Record (continued)', M, 14); doc.setDrawColor(...C.rule); doc.setLineWidth(0.4); doc.line(M, 18, M + CW, 18); y = 26; }
+    function hrule(color, lw) { doc.setDrawColor(...(color || C.rule)); doc.setLineWidth(lw || 0.5); doc.line(M, y, M + CW, y); }
+    function thinRule() { y += 1; hrule(C.rule, 0.3); y += 1; }
+    function drawSectionLabel(lbl) { ensure(30); doc.setFillColor(...C.navy); doc.roundedRect(M, y, CW, 21, 3, 3, 'F'); doc.setFillColor(...C.green); doc.rect(M, y, 4, 21, 'F'); st(9, 'bold', C.white); doc.text(lbl.toUpperCase(), M + 12, y + 14); y += 34; }
+    function sectionLabelText(lbl, bodyText) { const lines = doc.splitTextToSize(clean(bodyText) || '-', CW); ensure(10 + lines.length * LH + 14); drawSectionLabel(lbl); st(9, 'normal', C.text); doc.text(lines, M, y); y += lines.length * LH + 6; }
+    function sectionNumberedList(lbl, items) { const parsed = items.map(item => doc.splitTextToSize(clean(item), CW - 18)); ensure(10 + parsed.reduce((s, l) => s + l.length * LH + 6, 0) + 14); drawSectionLabel(lbl); parsed.forEach((lines, idx) => { ensure(lines.length * LH + 8); st(9, 'bold', C.navy); doc.text(`${idx + 1}.`, M, y); st(9, 'normal', C.text); doc.text(lines, M + 18, y); y += lines.length * LH + 4; }); }
+    function parseNumbered(txt) { const s = clean(txt || ''), parts = [...s.matchAll(/(?:^|\n)\s*\d+\.\s*([\s\S]*?)(?=\n\s*\d+\.|$)/g)].map(m => m[1].trim()).filter(Boolean); return parts.length ? parts : s ? [s] : ['-']; }
+    function classifyCit(cit) { const lc = cit.toLowerCase(); if (lc.includes('iberrail') || lc.includes('ib-emu') || lc.includes('ts-004') || lc.includes('spec')) return 'SPEC'; if (lc.includes('tsi') || lc.includes('en 14752') || lc.includes('loc&pas') || lc.includes('1302/2014')) return 'TSI'; if (lc.includes('arr') || lc.includes('nf f31') || lc.includes('rfn') || lc.includes('national rule')) return 'NNTR'; return 'NNTR'; }
 
-    const C = {
-      navy:  [14,  37,  71],
-      green: [76,  175, 59],
-      red:   [192, 57,  43],
-      amber: [217, 119, 6],
-      text:  [26,  26,  46],
-      muted: [107, 114, 128],
-      rule:  [229, 231, 235],
-      soft:  [249, 250, 251],
-      white: [255, 255, 255],
-      navylt:[148, 175, 201],
-    };
+    const bannerH = 75; doc.setFillColor(...C.navy); doc.rect(0, 0, pageW, bannerH, 'F');
+    st(20, 'bold', C.white); const twW = doc.getTextWidth('TrackMind'); doc.text('TrackMind', M, 34); st(20, 'bold', C.green); doc.text(' AI', M + twW, 34);
+    st(8, 'normal', C.navylt); doc.text('Human-reviewed railway compliance audit record', M, 52); y = bannerH + 22;
 
-    function clean(v) {
-      return String(v || '')
-        .replace(/[""]/g, '"').replace(/['']/g, "'")
-        .replace(/≤/g, '<=').replace(/≥/g, '>=')
-        .replace(/[–—]/g, '-').replace(/·/g, '-')
-        .replace(/\u00a0/g, ' ').trim();
-    }
+    const third = CW / 3, reviewColor = safeDecision === 'REJECTED' ? C.red : safeDecision === 'ESCALATED' ? C.amber : C.green;
+    st(8, 'bold', C.text); doc.text('GENERATED AT', M + 8, y); doc.text('ASSESSOR ID', M + third + 8, y); doc.text('RESPONSE ID', M + third * 2 + 8, y);
+    y += 13; st(10, 'bold', C.text); doc.text(clean(now.toLocaleString()), M + 8, y); doc.text(clean(assessorId), M + third + 8, y); doc.text(clean(ids?.response_id || '-'), M + third * 2 + 8, y);
+    y += 18; hrule(C.rule, 0.4); y += 18;
 
-    function st(size, style, color) {
-      doc.setFont('helvetica', style || 'normal');
-      doc.setFontSize(size);
-      doc.setTextColor(...(color || C.text));
-    }
+    const verdict = lastVerdict.verdict || '-', confPct = lastVerdict.confidence_pct || '-', confTier = (lastVerdict.confidence_tier || '').toUpperCase(), confidence = `${confPct}% — ${confTier}`;
+    const verdictColor = verdict === 'CONFLICT DETECTED' ? C.red : verdict === 'COMPLIANT' ? C.green : C.muted, confColor = confTier === 'GREEN' ? C.green : confTier === 'RED' ? C.red : C.amber;
 
-    function ensure(need) {
-      if (y + need > pageH - FOOTER_H - 10) {
-        drawFooter();
-        doc.addPage();
-        y = 0;
-        drawContHeader();
-      }
-    }
+    st(8, 'bold', C.text); doc.text('Verdict', M, y); doc.text('Confidence Level', M + third, y); doc.text('Review outcome', M + third * 2, y); y += 13;
+    st(9, 'bold', verdictColor); const vw = doc.getTextWidth(verdict) + 18; doc.setDrawColor(...verdictColor); doc.setFillColor(...C.white); doc.setLineWidth(0.8); doc.roundedRect(M, y, vw, 16, 6, 6, 'FD'); doc.text(verdict, M + 9, y + 11);
+    st(10, 'bold', confColor); doc.text(confidence, M + third, y + 11);
+    const rw = doc.getTextWidth(safeDecision) + 18; doc.setFillColor(...reviewColor); doc.setDrawColor(...reviewColor); doc.roundedRect(M + third * 2, y, rw, 16, 6, 6, 'F'); st(9, 'bold', C.white); doc.text(safeDecision, M + third * 2 + 9, y + 11);
+    y += 26; thinRule();
 
-    function drawFooter() {
-      doc.setDrawColor(...C.rule);
-      doc.setLineWidth(0.5);
-      doc.line(M, pageH - FOOTER_H, M + CW, pageH - FOOTER_H);
-      st(7, 'normal', C.muted);
-      doc.text('TrackMind AI prototype - AI draft only. Final compliance positions require assessor approval.', M, pageH - FOOTER_H + 12);
-    }
+    sectionLabelText('Compliance query', lastQuery); thinRule();
+    sectionNumberedList('Final explanation', parseNumbered(clean($('review-explanation').value || lastVerdict.explanation || '-'))); thinRule();
+    sectionNumberedList('Final recommended action', parseNumbered($('review-action').value)); thinRule();
+    sectionLabelText('Assessor notes', $('review-notes').value || 'No assessor notes provided.'); thinRule();
 
-    function drawContHeader() {
-      st(7.5, 'bold', C.navy);
-      doc.text('TrackMind AI \u00b7 Audit Record (continued)', M, 14);
-      doc.setDrawColor(...C.rule);
-      doc.setLineWidth(0.4);
-      doc.line(M, 18, M + CW, 18);
-      y = 26;
-    }
-
-    function hrule(color, lw) {
-      doc.setDrawColor(...(color || C.rule));
-      doc.setLineWidth(lw || 0.5);
-      doc.line(M, y, M + CW, y);
-    }
-
-    function label(txt) {
-      st(7, 'bold', C.muted);
-      doc.text(txt.toUpperCase(), M, y);
-    }
-
-    function thinRule() {
-      y += 1;
-      hrule(C.rule, 0.3);
-      y += 1;
-    }
-
-    function drawSectionLabel(lbl) {
-      ensure(30);
-      doc.setFillColor(...C.navy);
-      doc.roundedRect(M, y, CW, 21, 3, 3, 'F');
-      doc.setFillColor(...C.green);
-      doc.rect(M, y, 4, 21, 'F');
-      st(9, 'bold', C.white);
-      doc.text(lbl.toUpperCase(), M + 12, y + 14);
-      y += 34;
-    }
-
-    function sectionLabelText(lbl, bodyText) {
-      const lines = doc.splitTextToSize(clean(bodyText) || '-', CW);
-      ensure(10 + lines.length * LH + 14);
-      drawSectionLabel(lbl);
-      st(9, 'normal', C.text);
-      doc.text(lines, M, y);
-      y += lines.length * LH + 6;
-    }
-
-    function sectionNumberedList(lbl, items) {
-      const parsed = items.map(item => doc.splitTextToSize(clean(item), CW - 18));
-      ensure(10 + parsed.reduce((s, l) => s + l.length * LH + 6, 0) + 14);
-      drawSectionLabel(lbl);
-      parsed.forEach((lines, idx) => {
-        ensure(lines.length * LH + 8);
-        st(9, 'bold', C.navy);
-        doc.text(`${idx + 1}.`, M, y);
-        st(9, 'normal', C.text);
-        doc.text(lines, M + 18, y);
-        y += lines.length * LH + 4;
-      });
-    }
-
-    function parseNumbered(txt) {
-      const s = clean(txt || '');
-      const parts = [...s.matchAll(/(?:^|\n)\s*\d+\.\s*([\s\S]*?)(?=\n\s*\d+\.|$)/g)]
-        .map(m => m[1].trim()).filter(Boolean);
-      return parts.length ? parts : s ? [s] : ['-'];
-    }
-
-    function classifyCit(cit) {
-      const lc = cit.toLowerCase();
-      if (lc.includes('iberrail') || lc.includes('ib-emu') || lc.includes('ts-004') || lc.includes('spec')) return 'SPEC';
-      if (lc.includes('tsi') || lc.includes('en 14752') || lc.includes('loc&pas') || lc.includes('1302/2014')) return 'TSI';
-      if (lc.includes('arr') || lc.includes('nf f31') || lc.includes('rfn') || lc.includes('national rule')) return 'NNTR';
-      return 'NNTR';
-    }
-
-    // ── HEADER ────────────────────────────────────────────────────────────────
-    const bannerH = 75;
-    doc.setFillColor(...C.navy);
-    doc.rect(0, 0, pageW, bannerH, 'F');
-
-    st(20, 'bold', C.white);
-    const twW = doc.getTextWidth('TrackMind');
-    doc.text('TrackMind', M, 34);
-    st(20, 'bold', C.green);
-    doc.text(' AI', M + twW, 34);
-
-    st(8, 'normal', C.navylt);
-    doc.text('Human-reviewed railway compliance audit record', M, 52);
-
-    y = bannerH + 22;
-
-    // ── META GRID ─────────────────────────────────────────────────────────────
-    const third = CW / 3;
-    const reviewColor = safeDecision === 'REJECTED' ? C.red : safeDecision === 'ESCALATED' ? C.amber : C.green;
-
-    // Row 1: Generated at | Assessor ID | Response ID
-    const thirds = CW / 3;
-    st(8, 'bold', C.text);
-    doc.text('GENERATED AT', M + 8,              y);
-    doc.text('ASSESSOR ID',  M + thirds + 8,     y);
-    doc.text('RESPONSE ID',  M + thirds * 2 + 8, y);
-    y += 13;
-    st(10, 'bold', C.text);
-    doc.text(clean(now.toLocaleString()),    M + 8,              y);
-    doc.text(clean(assessorId),              M + thirds + 8,     y);
-    doc.text(clean(ids?.response_id || '-'), M + thirds * 2 + 8, y);
-    y += 18;
-    hrule(C.rule, 0.4);
-    y += 18;
-
-    // ── VERDICT + CONFIDENCE ──────────────────────────────────────────────────
-    const verdict    = lastVerdict.verdict || '-';
-    const confPct    = lastVerdict.confidence_pct || '-';
-    const confTier   = (lastVerdict.confidence_tier || '').toUpperCase();
-    const confidence = `${confPct}% \u2014 ${confTier}`;
-    const verdictColor = verdict === 'CONFLICT DETECTED' ? C.red : verdict === 'COMPLIANT' ? C.green : C.muted;
-    const confColor    = confTier === 'GREEN' ? C.green : confTier === 'RED' ? C.red : C.amber;
-
-    st(8, 'bold', C.text);
-    doc.text('Verdict',          M,             y);
-    doc.text('Confidence Level', M + third,     y);
-    doc.text('Review outcome',   M + third * 2, y);
-    y += 13;
-
-    st(9, 'bold', verdictColor);
-    const vw = doc.getTextWidth(verdict) + 18;
-    doc.setDrawColor(...verdictColor);
-    doc.setFillColor(...C.white);
-    doc.setLineWidth(0.8);
-    doc.roundedRect(M, y, vw, 16, 6, 6, 'FD');
-    doc.text(verdict, M + 9, y + 11);
-
-    st(10, 'bold', confColor);
-    doc.text(confidence, M + third, y + 11);
-
-    const rw = doc.getTextWidth(safeDecision) + 18;
-    doc.setFillColor(...reviewColor);
-    doc.setDrawColor(...reviewColor);
-    doc.roundedRect(M + third * 2, y, rw, 16, 6, 6, 'F');
-    st(9, 'bold', C.white);
-    doc.text(safeDecision, M + third * 2 + 9, y + 11);
-
-    y += 26;
-    thinRule();
-
-    // ── CONTENT SECTIONS ──────────────────────────────────────────────────────
-    sectionLabelText('Compliance query', lastQuery);
-    thinRule();
-
-    const expText = clean($('review-explanation').value || lastVerdict.explanation || '-');
-    sectionNumberedList('Final explanation', parseNumbered(expText));
-    thinRule();
-
-    sectionNumberedList('Final recommended action', parseNumbered($('review-action').value));
-    thinRule();
-
-    sectionLabelText('Assessor notes', $('review-notes').value || 'No assessor notes provided.');
-    thinRule();
-
-    // ── CITATIONS ─────────────────────────────────────────────────────────────
-    const citConfig = [
-      { key: 'TSI',  label: 'EU TSI Regulations',  color: C.navy },
-      { key: 'NNTR', label: 'French RFN Rules',     color: [146, 64, 14] },
-      { key: 'SPEC', label: 'Your Specifications',  color: [22, 101, 52] },
-    ];
-
-    const grouped = { TSI: [], NNTR: [], SPEC: [] };
-    (lastVerdict.citations || []).forEach(c => { grouped[classifyCit(c)].push(clean(c)); });
+    const citConfig = [{ key: 'TSI', label: 'EU TSI Regulations', color: C.navy }, { key: 'NNTR', label: 'French RFN Rules', color: [146,64,14] }, { key: 'SPEC', label: 'Your Specifications', color: [22,101,52] }];
+    const grouped = { TSI: [], NNTR: [], SPEC: [] }; (lastVerdict.citations || []).forEach(c => grouped[classifyCit(c)].push(clean(c)));
     const citGroups = citConfig.filter(g => grouped[g.key].length).map(g => ({ ...g, chips: grouped[g.key] }));
 
     if (citGroups.length) {
-      ensure(32);
-      drawSectionLabel('Citations');
-
-      const chipH   = 14;
-      const chipGap = 5;
-      const labelColW = 104;
-
-      citGroups.forEach((grp, gi) => {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
+      ensure(32); drawSectionLabel('Citations');
+      const chipH = 14, chipGap = 5, labelColW = 104;
+      citGroups.forEach(grp => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
         let rowW = 0, rows = 1;
+        grp.chips.forEach(chip => { const cw = doc.getTextWidth(`[${grp.key}] ${chip}`) + 14; if (rowW + cw + chipGap > CW - labelColW && rowW > 0) { rows++; rowW = 0; } rowW += cw + chipGap; });
+        const rowH = rows * (chipH + 4) + 14; ensure(rowH + 6);
+        doc.setFillColor(...grp.color); doc.circle(M + 3, y + 6, 3, 'F'); st(8, 'bold', grp.color); doc.text(grp.label, M + 9, y + 9);
+
+        let cx = M + labelColW, cy = y;
         grp.chips.forEach(chip => {
-          const cw = doc.getTextWidth(`[${grp.key}] ${chip}`) + 14;
-          if (rowW + cw + chipGap > CW - labelColW && rowW > 0) { rows++; rowW = 0; }
-          rowW += cw + chipGap;
+          const chipText = `[${grp.key}] ${chip}`, cw = doc.getTextWidth(chipText) + 14;
+          if (cx + cw > M + CW) { cx = M + labelColW; cy += chipH + 4; }
+          doc.setFillColor(...C.soft); doc.setDrawColor(...C.rule); doc.setLineWidth(0.5); doc.roundedRect(cx, cy, cw, chipH, 4, 4, 'FD');
+          st(8, 'normal', grp.color); doc.text(chipText, cx + 7, cy + 9); cx += cw + chipGap;
         });
-        const rowH = rows * (chipH + 4) + 14;
-        ensure(rowH + 6);
-
-        doc.setFillColor(...grp.color);
-        doc.circle(M + 3, y + 6, 3, 'F');
-        st(8, 'bold', grp.color);
-        doc.text(grp.label, M + 9, y + 9);
-
-        let cx = M + labelColW;
-        let cy = y;
-        grp.chips.forEach(chip => {
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8);
-          const chipText = `[${grp.key}] ${chip}`;
-          const cw = doc.getTextWidth(chipText) + 14;
-
-          if (cx + cw > M + CW) {
-            cx = M + labelColW;
-            cy += chipH + 4;
-          }
-
-          doc.setFillColor(...C.soft);
-          doc.setDrawColor(...C.rule);
-          doc.setLineWidth(0.5);
-          doc.roundedRect(cx, cy, cw, chipH, 4, 4, 'FD');
-
-          st(8, 'normal', grp.color);
-          doc.text(chipText, cx + 7, cy + 9);
-
-          cx += cw + chipGap;
-        });
-
         y += rowH - 8;
-
-        if (gi < citGroups.length - 1) {
-          y += 0;
-        }
       });
     }
 
-    // ── FOOTERS (all pages) ───────────────────────────────────────────────────
     const total = doc.getNumberOfPages();
-    for (let i = 1; i <= total; i++) {
-      doc.setPage(i);
-      drawFooter();
-      st(7, 'normal', C.muted);
-      doc.text(`Page ${i} / ${total}`, M + CW, pageH - FOOTER_H + 12, { align: 'right' });
-    }
+    for (let i = 1; i <= total; i++) { doc.setPage(i); drawFooter(); st(7, 'normal', C.muted); doc.text(`Page ${i} / ${total}`, M + CW, pageH - FOOTER_H + 12, { align: 'right' }); }
 
     latestRecordName = `TrackMind_Audit_Record_${safeDecision}_${stamp}.pdf`;
     latestRecordUrl = URL.createObjectURL(doc.output('blob'));
@@ -1429,201 +429,74 @@
     $('record-export').classList.add('active');
   }
 
-  function downloadComplianceRecord() {
-    if (!latestRecordUrl) { toast('No compliance record generated yet.', 'error'); return; }
-    const a = document.createElement('a');
-    a.href = latestRecordUrl;
-    a.download = latestRecordName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
+  function downloadComplianceRecord() { if (!latestRecordUrl) { toast('No compliance record generated yet.', 'error'); return; } const a = document.createElement('a'); a.href = latestRecordUrl; a.download = latestRecordName; document.body.appendChild(a); a.click(); a.remove(); }
 
   function resetForNewAnalysis() {
-    lastVerdict = null;
-    lastQuery = '';
-    editingHistoryQuery = null;
+    lastVerdict = null; lastQuery = ''; editingHistoryQuery = null;
     if (latestRecordUrl) URL.revokeObjectURL(latestRecordUrl);
-    latestRecordUrl = null;
-    latestRecordName = '';
-
-    qInput.value = '';
-    aBtn.disabled = true;
-    fi.value = '';
-
-    $('uploaded').classList.remove('active');
-    dz.style.display = 'flex';
-    $('results').classList.remove('active');
-    $('results-empty').style.display = 'block';
-    $('results-loading').classList.remove('active');
-    $('record-export').classList.remove('active');
-
-    $('step1-num').classList.remove('done');
-    $('step2-num').classList.remove('done');
-    $('step3-num').classList.remove('done');
-
-    $('review-explanation').value = '';
-    $('review-action').value = '';
-    $('review-notes').value = '';
-
-    ['tsi','nntr','spec'].forEach(key => { $('chunks-' + key + '-inner').innerHTML = ''; });
-    ['tsi','nntr','spec'].forEach(key => { $(`citations-${key}`).innerHTML = ''; $(`citations-${key}-group`).style.display = 'none'; });
-    $('citations-block').style.display = 'none';
-
-    $('step-1').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  function refreshStats() {
-    $('stat-approved').textContent = sessionStats.approved;
-    $('stat-rejected').textContent = sessionStats.rejected;
-    $('stat-pending').textContent = sessionStats.pending;
+    latestRecordUrl = null; latestRecordName = ''; qInput.value = ''; aBtn.disabled = true; fi.value = '';
+    $('uploaded').classList.remove('active'); dz.style.display = 'flex'; $('results').classList.remove('active'); $('results-empty').style.display = 'block'; $('results-loading').classList.remove('active'); $('record-export').classList.remove('active');
+    ['step1-num','step2-num','step3-num'].forEach(id => $(id).classList.remove('done'));
+    ['review-explanation','review-action','review-notes'].forEach(id => $(id).value = '');
+    ['tsi','nntr','spec'].forEach(key => { $('chunks-' + key + '-inner').innerHTML = ''; $(`citations-${key}`).innerHTML = ''; $(`citations-${key}-group`).style.display = 'none'; });
+    $('citations-block').style.display = 'none'; $('step-1').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   let toastTimer;
-  function toast(msg, kind) {
-    const t = $('toast');
-    t.className = 'toast' + (kind ? ' ' + kind : '') + ' show';
-    $('toast-msg').textContent = msg;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
-  }
-
-  function formatAuditTime(ts) {
-    if (!ts) return '—';
-    const date = new Date(ts);
-    if (Number.isNaN(date.getTime())) return String(ts).slice(11, 19) || '—';
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  }
+  function toast(msg, kind) { const t = $('toast'); t.className = 'toast' + (kind ? ' ' + kind : '') + ' show'; $('toast-msg').textContent = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200); }
 
   function getNumberedItems(text) {
-    const value = String(text || '').trim();
-    if (!value) return [];
-
-    const withBreaks = value.replace(/\s+(?=\d+\.\s+\D)/g, '\n');
-    const matches = [...withBreaks.matchAll(/(?:^|\n)\s*\d+\.\s*([\s\S]*?)(?=\n\s*\d+\.\s*|$)/g)];
-
-    if (matches.length) {
-      return matches.map(match => match[1].trim()).filter(Boolean);
-    }
-
-    return value.split(/\n{2,}/).map(item => item.trim()).filter(Boolean);
+    const value = String(text || '').trim(); if (!value) return [];
+    const withBreaks = value.replace(/\s+(?=\d+\.\s+\D)/g, '\n'), matches = [...withBreaks.matchAll(/(?:^|\n)\s*\d+\.\s*([\s\S]*?)(?=\n\s*\d+\.\s*|$)/g)];
+    return matches.length ? matches.map(match => match[1].trim()).filter(Boolean) : value.split(/\n{2,}/).map(item => item.trim()).filter(Boolean);
   }
 
-  function formatNumberedPlain(text) {
-    const items = getNumberedItems(text);
-    return items.map((item, i) => `${i + 1}. ${item}`).join('\n\n');
-  }
+  function formatNumberedPlain(text) { return getNumberedItems(text).map((item, i) => `${i + 1}. ${item}`).join('\n\n'); }
+  function formatNumberedHtml(text) { return getNumberedItems(text).map((item, i) => `<p><strong>${i + 1}.</strong> ${escapeHtml(item)}</p>`).join(''); }
+  function fitTextareaToContent(el) { el.style.height = '0px'; el.style.height = `${el.scrollHeight}px`; }
+  function fitModelTextareas() { ['review-explanation','review-action','review-notes'].forEach(id => fitTextareaToContent($(id))); }
+  ['review-explanation','review-action','review-notes'].forEach(id => $(id).addEventListener('input', e => fitTextareaToContent(e.target)));
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-  function formatNumberedHtml(text) {
-    const items = getNumberedItems(text);
-    return items.map((item, i) => `<p><strong>${i + 1}.</strong> ${escapeHtml(item)}</p>`).join('');
-  }
-
-  function fitTextareaToContent(el) {
-    el.style.height = '0px';
-    el.style.height = `${el.scrollHeight}px`;
-  }
-
-  function fitModelTextareas() {
-    ['review-explanation', 'review-action', 'review-notes'].forEach(id => fitTextareaToContent($(id)));
-  }
-
-  ['review-explanation', 'review-action', 'review-notes'].forEach(id => {
-    $(id).addEventListener('input', e => fitTextareaToContent(e.target));
-  });
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  document.getElementById('audit-search').addEventListener('input', function() {
+  $('audit-search').addEventListener('input', function() {
     const term = this.value.toLowerCase();
-    document.querySelectorAll('#audit-log li').forEach(li => {
-      const q = li.querySelector('.audit-q');
-      if (!q) return;
-      li.style.display = q.textContent.toLowerCase().includes(term) ? '' : 'none';
-    });
+    document.querySelectorAll('#audit-log li').forEach(li => { const q = li.querySelector('.audit-q'); if (!q) return; li.style.display = q.textContent.toLowerCase().includes(term) ? '' : 'none'; });
   });
 
   function openHistoryModal(query) {
-    const d = sessionHistory[query];
-    if (!d) return;
+    const d = sessionHistory[query]; if (!d) return;
+    const modal = $('history-modal'); modal.dataset.query = query; $('hm-query').textContent = query;
 
-    const modal = $('history-modal');
-    modal.dataset.query = query;
-    $('hm-query').textContent = query;
-
-    const pill = $('hm-verdict');
-    pill.className = 'verdict-pill';
-    if (d.verdict === 'CONFLICT DETECTED') pill.classList.add('conflict');
-    else if (d.verdict === 'COMPLIANT') pill.classList.add('compliant');
-    else pill.classList.add('insufficient');
+    const pill = $('hm-verdict'); pill.className = 'verdict-pill';
+    if (d.verdict === 'CONFLICT DETECTED') pill.classList.add('conflict'); else if (d.verdict === 'COMPLIANT') pill.classList.add('compliant'); else pill.classList.add('insufficient');
     pill.innerHTML = `<span class="dot"></span>${escapeHtml(d.verdict)}`;
 
-    const pct = Math.round(d.confidence_pct || 0);
-    const tier = String(d.confidence_tier || (pct < 40 ? 'RED' : pct < 70 ? 'AMBER' : 'GREEN')).toUpperCase();
-    const confClass = tier === 'RED' ? 'low' : tier === 'GREEN' ? 'high' : 'mid';
-    const conf = $('hm-conf');
-    conf.className = `conf-pill ${confClass}`;
-    $('hm-conf-pct').textContent = `${pct}% · ${tier}`;
+    const pct = Math.round(d.confidence_pct || 0), tier = String(d.confidence_tier || (pct < 40 ? 'RED' : pct < 70 ? 'AMBER' : 'GREEN')).toUpperCase(), confClass = tier === 'RED' ? 'low' : tier === 'GREEN' ? 'high' : 'mid';
+    $('hm-conf').className = `conf-pill ${confClass}`; $('hm-conf-pct').textContent = `${pct}% · ${tier}`;
 
-    const review = d._review;
-    const decisionEl = $('hm-decision');
+    const review = d._review, decisionEl = $('hm-decision');
     if (review) {
-      decisionEl.style.display = 'inline-flex';
-      decisionEl.textContent = review.decision;
+      decisionEl.style.display = 'inline-flex'; decisionEl.textContent = review.decision;
       decisionEl.style.color = review.decision === 'APPROVED' ? '#166534' : '#991b1b';
       decisionEl.style.background = review.decision === 'APPROVED' ? 'rgba(76,175,59,.1)' : 'rgba(224,71,62,.08)';
       decisionEl.style.borderColor = review.decision === 'APPROVED' ? 'rgba(76,175,59,.3)' : 'rgba(224,71,62,.3)';
-      $('hm-explanation').innerHTML = formatNumberedHtml(review.explanation);
-      $('hm-action').innerHTML = formatNumberedHtml(review.action);
-      $('hm-notes-block').style.display = 'block';
-      $('hm-notes').textContent = review.notes || 'No assessor notes provided.';
+      $('hm-explanation').innerHTML = formatNumberedHtml(review.explanation); $('hm-action').innerHTML = formatNumberedHtml(review.action); $('hm-notes-block').style.display = 'block'; $('hm-notes').textContent = review.notes || 'No assessor notes provided.';
     } else {
-      decisionEl.style.display = 'inline-flex';
-      decisionEl.textContent = 'PENDING';
-      decisionEl.style.color = '#92400e';
-      decisionEl.style.background = 'rgba(245,165,36,.14)';
-      decisionEl.style.borderColor = 'rgba(245,165,36,.34)';
-      $('hm-explanation').innerHTML = formatNumberedHtml(d.explanation);
-      $('hm-action').innerHTML = formatNumberedHtml(d.recommended_action);
-      $('hm-notes-block').style.display = 'none';
-      $('hm-notes').textContent = '';
+      decisionEl.style.display = 'inline-flex'; decisionEl.textContent = 'PENDING'; decisionEl.style.color = '#92400e'; decisionEl.style.background = 'rgba(245,165,36,.14)'; decisionEl.style.borderColor = 'rgba(245,165,36,.34)';
+      $('hm-explanation').innerHTML = formatNumberedHtml(d.explanation); $('hm-action').innerHTML = formatNumberedHtml(d.recommended_action); $('hm-notes-block').style.display = 'none'; $('hm-notes').textContent = '';
     }
 
-    const citEl = $('hm-citations');
-    citEl.innerHTML = '';
-    (d.citations || []).forEach(c => {
-      const chip = document.createElement('span');
-      chip.className = 'citation-chip';
-      chip.textContent = c;
-      citEl.appendChild(chip);
-    });
-
+    const citEl = $('hm-citations'); citEl.innerHTML = '';
+    (d.citations || []).forEach(c => { const chip = document.createElement('span'); chip.className = 'citation-chip'; chip.textContent = c; citEl.appendChild(chip); });
     modal.style.display = 'block';
   }
 
   async function editHistoryQuery() {
-    const query = $('history-modal').dataset.query;
-    const data = sessionHistory[query];
-    if (!data) return;
-
-    $('history-modal').style.display = 'none';
-    $('record-export').classList.remove('active');
-    editingHistoryQuery = query;
-    lastQuery = query;
-
-    qInput.value = query;
-    aBtn.disabled = false;
-    $('results-empty').style.display = 'none';
-    $('results-loading').classList.remove('active');
-
-    const querySec = data._query_ms ? (data._query_ms / 1000).toFixed(1) : '';
-    await renderResults(data, querySec, { editMode: true });
-    $('step2-num').classList.add('done');
-    $('step3-num').classList.add('done');
-    $('step-2').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    toast('History query loaded for editing.', 'success');
+    const query = $('history-modal').dataset.query, data = sessionHistory[query]; if (!data) return;
+    $('history-modal').style.display = 'none'; $('record-export').classList.remove('active'); editingHistoryQuery = query; lastQuery = query;
+    qInput.value = query; aBtn.disabled = false; $('results-empty').style.display = 'none'; $('results-loading').classList.remove('active');
+    await renderResults(data, data._query_ms ? (data._query_ms / 1000).toFixed(1) : '', { editMode: true });
+    $('step2-num').classList.add('done'); $('step3-num').classList.add('done'); $('step-2').scrollIntoView({ behavior: 'smooth', block: 'start' }); toast('History query loaded for editing.', 'success');
   }
 
   initMode();
