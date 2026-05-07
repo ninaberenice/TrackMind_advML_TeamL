@@ -1,3 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# ChromaDB
+chroma_db/
+
+# Jupyter
+.ipynb_checkpoints/
+ 
+# Environment
+.env
+
 # Logs
 logs
 *.log
