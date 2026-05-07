@@ -159,7 +159,7 @@
     return window.location.origin || fallback;
   })();
 
-  let MOCK_MODE = false, API_AVAILABLE = false, lastVerdict = null, lastQuery = '', latestRecordUrl = null, latestRecordName = '', editingHistoryQuery = null;
+  let MOCK_MODE = false, API_AVAILABLE = false, lastVerdict = null, lastQuery = '', latestRecordUrl = null, latestRecordName = '', editingHistoryQuery = null, sessionId = '';
   const ASSESSOR_ID = 'NoBo-Assessor-001', sessionHistory = {}, sessionStats = { approved: 0, rejected: 0, escalated: 0, pending: 0 }, $ = id => document.getElementById(id);
   function setStatus(state) {
     const live = $('btn-live'), mock = $('btn-mock');
@@ -191,7 +191,7 @@
   async function analyse(query) {
     if (!API_AVAILABLE) await checkBackend();
     if (!API_AVAILABLE) throw new Error('Backend unavailable. Start FastAPI with: uvicorn api:app --reload --port 8000');
-    const r = await fetch(`${API_BASE}/analyse`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, n_chunks: 5, mock: MOCK_MODE }) });
+    const r = await fetch(`${API_BASE}/analyse`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, n_chunks: 5, mock: MOCK_MODE, session_id: sessionId }) });
     if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error(err.detail || 'Analysis failed.'); }
     return normaliseApiResponse(await r.json(), query);
   }
@@ -251,11 +251,43 @@
   ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
   dz.addEventListener('drop', e => { if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
   fi.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
-  $('file-remove').addEventListener('click', () => { fi.value=''; $('uploaded').classList.remove('active'); dz.style.display='flex'; $('step1-num').classList.remove('done'); });
+  $('file-remove').addEventListener('click', () => {
+    if (sessionId) {
+      fetch(`${API_BASE}/upload-spec/${sessionId}`, { method: 'DELETE' }).catch(() => {});
+      sessionId = '';
+    }
+    fi.value=''; $('uploaded').classList.remove('active'); dz.style.display='flex'; $('step1-num').classList.remove('done');
+  });
 
-  function handleFile(file) {
+  async function handleFile(file) {
     if (file.type !== 'application/pdf') { toast('Only PDF files are supported.', 'error'); return; }
-    $('file-name').textContent = file.name; $('file-size').textContent = 'specification documentation loaded'; $('uploaded').classList.add('active'); dz.style.display='none'; $('step1-num').classList.add('done'); toast('Document ready for analysis', 'success');
+
+    // Clear any previous session spec from the server
+    if (sessionId) {
+      await fetch(`${API_BASE}/upload-spec/${sessionId}`, { method: 'DELETE' }).catch(() => {});
+      sessionId = '';
+    }
+
+    $('file-name').textContent = file.name;
+    $('file-size').textContent = 'Uploading and chunking…';
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    try {
+      const res = await fetch(`${API_BASE}/upload-spec`, { method: 'POST', body: fd });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || 'Upload failed'); }
+      const data = await res.json();
+      sessionId = data.session_id;
+      $('file-size').textContent = `${data.chunk_count} chunks · session memory only — not stored in DB`;
+      $('uploaded').classList.add('active');
+      dz.style.display = 'none';
+      $('step1-num').classList.add('done');
+      toast(`Spec loaded — ${data.chunk_count} chunks`, 'success');
+    } catch (e) {
+      $('file-size').textContent = '';
+      toast('Upload failed: ' + e.message, 'error');
+    }
   }
 
   qInput.addEventListener('input', () => { aBtn.disabled = !qInput.value.trim(); });

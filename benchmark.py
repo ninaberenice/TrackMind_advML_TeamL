@@ -209,7 +209,7 @@ def run_benchmark(
         if verbose:
             print(f"  Query: {query[:70]}...")
 
-        response = reason(query, n_chunks=n_chunks, mock=mock)
+        response, _ = reason(query, n_chunks=n_chunks, mock=mock)
 
         # Verdict match (case-insensitive, allow partial match)
         verdict_match = exp_verdict.upper() in response.verdict.upper()

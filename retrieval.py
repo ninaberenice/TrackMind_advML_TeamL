@@ -3,9 +3,19 @@ retrieval.py
 ============
 Tri-source ChromaDB retrieval for TrackMind.
 
-Three independent collections queried in parallel — deliberately isolated
-so the LLM reasons *across* source boundaries rather than treating them as
-one blended index. The isolation is what makes conflict detection possible.
+Architecture (updated):
+  - TSI (tsi_loc_pas) and NNTR (nntr_france) are permanently ingested in ChromaDB.
+  - SPEC is NOT stored in ChromaDB. Instead, the user uploads a spec PDF per session.
+    The spec is chunked in memory and injected directly into the LLM context.
+    This means manufacturer specs never persist in the vector DB — cleaner, safer,
+    and architecturally correct (the spec is the "subject under test", not a rule source).
+
+Key functions:
+  tri_source_retrieve()          — original, queries all 3 ChromaDB collections
+                                   (spec_doc collection will be empty/ignored now)
+  retrieve_regulatory()          — queries TSI + NNTR only (no spec)
+  retrieve_with_session_spec()   — queries TSI + NNTR from ChromaDB, uses in-memory
+                                   spec chunks passed from the upload session
 
 Usage (standalone):
     python retrieval.py                          # run cross-lingual test
@@ -17,8 +27,6 @@ import chromadb
 from sentence_transformers import SentenceTransformer
 
 # ── Model + Collections ───────────────────────────────────────────────────────
-# Loaded once at import time. Reused across every query call in the Streamlit
-# session — do not re-instantiate per query or you pay the 2.5 GB load cost.
 
 print("Loading bge-m3 (multilingual embedding model)...")
 _MODEL = SentenceTransformer("BAAI/bge-m3")
@@ -27,12 +35,11 @@ print("Model ready.")
 _CHROMA = chromadb.PersistentClient(path="./chroma_db")
 _TSI_COL  = _CHROMA.get_or_create_collection("tsi_loc_pas")
 _NNTR_COL = _CHROMA.get_or_create_collection("nntr_france")
-_SPEC_COL = _CHROMA.get_or_create_collection("spec_doc")
+# spec_doc collection is no longer used — specs are session-only in memory
 
 COLLECTIONS = {
     "tsi":  {"col": _TSI_COL,  "label": "LOC&PAS TSI",          "lang": "en"},
     "nntr": {"col": _NNTR_COL, "label": "Arrêté 19 mars 2012",   "lang": "fr"},
-    "spec": {"col": _SPEC_COL, "label": "IberRail IB-EMU-450",   "lang": "en"},
 }
 
 
@@ -43,28 +50,12 @@ def embed(text: str) -> list[float]:
 
 # ── Core retrieval ────────────────────────────────────────────────────────────
 
-def tri_source_retrieve(query: str, n: int = 5) -> dict:
+def retrieve_regulatory(query: str, n: int = 5) -> dict:
     """
-    Query all three collections simultaneously.
+    Query TSI and NNTR collections only (no spec).
 
-    Parameters
-    ----------
-    query : str
-        Natural language query in any language. bge-m3 handles cross-lingual
-        retrieval natively — English query will surface French NNTR chunks.
-    n : int
-        Number of results per collection (default 5).
-
-    Returns
-    -------
-    dict with keys 'tsi', 'nntr', 'spec', each containing:
-        {
-          'results': ChromaDB query result dict,
-          'chunks':  list of {'text', 'article', 'language', 'distance'} dicts,
-          'label':   human-readable collection name,
-          'lang':    source language code,
-          'empty':   bool
-        }
+    Returns dict with keys 'tsi', 'nntr', each containing:
+        { results, chunks, label, lang, empty }
     """
     q_emb = embed(query)
     output = {}
@@ -115,21 +106,124 @@ def tri_source_retrieve(query: str, n: int = 5) -> dict:
     return output
 
 
+def retrieve_with_session_spec(
+    query: str,
+    session_spec_chunks: list[dict],
+    n: int = 5,
+) -> dict:
+    """
+    Query TSI + NNTR from ChromaDB, and rank the uploaded session spec chunks
+    by cosine similarity in Python (no ChromaDB write).
+
+    Parameters
+    ----------
+    query : str
+        Compliance question.
+    session_spec_chunks : list[dict]
+        In-memory spec chunks from the uploaded PDF. Each chunk is:
+        { 'id', 'text', 'metadata': { 'article', 'doc_type', ... } }
+        These come from trackmind_chunker.chunk_generic() called at upload time.
+    n : int
+        Number of results per source.
+
+    Returns
+    -------
+    dict with keys 'tsi', 'nntr', 'spec' — same shape as tri_source_retrieve().
+    """
+    import numpy as np
+
+    # Get regulatory results from ChromaDB
+    regulatory = retrieve_regulatory(query, n=n)
+
+    # Rank spec chunks by cosine similarity in memory
+    spec_result = {
+        "results": None,
+        "chunks":  [],
+        "label":   "Uploaded Spec",
+        "lang":    "en",
+        "empty":   True,
+    }
+
+    if session_spec_chunks:
+        q_emb = embed(query)
+        q_vec = np.array(q_emb)
+
+        scored = []
+        for chunk in session_spec_chunks:
+            if "_embedding" not in chunk:
+                # Embed on first use and cache on the chunk object
+                chunk["_embedding"] = embed(chunk["text"])
+            c_vec = np.array(chunk["_embedding"])
+            # Cosine similarity (both normalised → dot product)
+            sim = float(np.dot(q_vec, c_vec))
+            distance = round(1.0 - sim, 4)  # convert to distance for consistency
+            scored.append((distance, chunk))
+
+        scored.sort(key=lambda x: x[0])
+        top_n = scored[:n]
+
+        spec_chunks = []
+        for dist, chunk in top_n:
+            spec_chunks.append({
+                "text":     chunk["text"],
+                "article":  chunk["metadata"].get("article", "unknown"),
+                "language": chunk["metadata"].get("language", "en"),
+                "doc_type": chunk["metadata"].get("doc_type", "SPEC"),
+                "distance": dist,
+                "source":   chunk["metadata"].get("source_file", "uploaded"),
+            })
+
+        spec_result = {
+            "results": None,
+            "chunks":  spec_chunks,
+            "label":   "Uploaded Spec",
+            "lang":    "en",
+            "empty":   False,
+        }
+
+    return {
+        "tsi":  regulatory["tsi"],
+        "nntr": regulatory["nntr"],
+        "spec": spec_result,
+    }
+
+
+# ── Legacy tri_source_retrieve (kept for backward compat / benchmark) ─────────
+
+def tri_source_retrieve(query: str, n: int = 5) -> dict:
+    """
+    Original function — now returns TSI + NNTR from ChromaDB and an empty spec
+    slot (since spec is no longer stored in ChromaDB). Kept for benchmark.py
+    and any callers that expect all three keys.
+    """
+    regulatory = retrieve_regulatory(query, n=n)
+    return {
+        "tsi":  regulatory["tsi"],
+        "nntr": regulatory["nntr"],
+        "spec": {
+            "results": None,
+            "chunks":  [],
+            "label":   "Spec (no file uploaded)",
+            "lang":    "en",
+            "empty":   True,
+        },
+    }
+
+
 def format_context_for_llm(retrieval_result: dict) -> str:
     """
-    Assemble the retrieved chunks into a structured context string for the
-    LLM reasoning layer. Language labels are included so the model knows
-    which source is French-language.
-
-    Used by reasoning.py. Also passed to the Streamlit UI for the left panel.
+    Assemble retrieved chunks into a structured context string for the LLM.
+    Works with both tri_source_retrieve() and retrieve_with_session_spec().
     """
     sections = []
     for key in ("tsi", "nntr", "spec"):
-        data = retrieval_result[key]
+        data = retrieval_result.get(key)
+        if data is None:
+            continue
         if data["empty"]:
             sections.append(
                 f"=== {data['label']} (language: {data['lang']}) ===\n"
-                f"[Collection empty — not yet ingested]\n"
+                f"[No document available for this source]\n"
             )
             continue
 
@@ -141,7 +235,7 @@ def format_context_for_llm(retrieval_result: dict) -> str:
         for i, c in enumerate(data["chunks"], 1):
             chunk_texts.append(
                 f"[{key.upper()}-{i}] Article/Section: {c['article']}\n"
-                f"{c['text'][:1200]}"  # cap per chunk to stay within context budget
+                f"{c['text'][:1200]}"
             )
         sections.append(header + "\n\n".join(chunk_texts))
 
@@ -150,24 +244,17 @@ def format_context_for_llm(retrieval_result: dict) -> str:
 
 # ── Cross-lingual precision measurement ──────────────────────────────────────
 
-# Ground-truth article IDs for the 10-query benchmark test set.
-# Format: (query_text, expected_tsi_article, expected_nntr_article)
-# expected_*_article = None means that collection is not expected to contribute.
-# Retrieval is "correct" if the expected article appears in the top-5 results.
-
 BENCHMARK_QUERIES = [
-    # Core demo queries — verified working
     (
         "passenger access doors closing and locking obstacle detection maximum force",
-        "4.2.5.5.3",  # TSI door closing and locking
-        "Art. 49",    # NNTR rolling stock requirements
+        "4.2.5.5.3",
+        "Art. 49",
     ),
     (
         "French national rule passenger doors rolling stock Article 49",
         "2.4.1",
         "Art. 49",
     ),
-    # TSI-only queries
     (
         "exterior door closing and locking requirements passenger train",
         "4.2.5.5.6",
@@ -183,7 +270,6 @@ BENCHMARK_QUERIES = [
         "4.2.5.5.7",
         None,
     ),
-    # NNTR — verified working queries
     (
         "matériel roulant portes voyageurs exigences Arrêté 2012",
         None,
@@ -194,21 +280,19 @@ BENCHMARK_QUERIES = [
         "4.2.4.2.2",
         "Art. 62",
     ),
-    # SpecDoc
     (
-        "IberRail IB-EMU-450 French authorisation EPSF AMEC",
-        None,
-        None,
+        "passenger access door width height dimensions rolling stock",
+        "4.2.5.5.1",
+        "Art. 49",
     ),
-    # Cross-lingual verified
     (
         "freinage train décélération exigences sécurité",
         "4.2.4.2.2",
         "Art. 62",
     ),
     (
-        "passenger access door width height dimensions rolling stock",
-        "4.2.5.5.1",
+        "door obstacle detection closing force kinetic energy limit",
+        "4.2.5.5.3",
         "Art. 49",
     ),
 ]
@@ -216,16 +300,8 @@ BENCHMARK_QUERIES = [
 
 def measure_retrieval_precision(n: int = 5, verbose: bool = True) -> dict:
     """
-    Run the 10-query benchmark and compute retrieval precision metrics.
-
-    Returns
-    -------
-    dict with keys:
-        tsi_precision       : float (0-1) — correct TSI article in top-n
-        nntr_precision      : float (0-1) — correct NNTR article in top-n
-        cross_lingual_prec  : float (0-1) — English query → French NNTR article
-        overall_precision   : float (0-1) — across all applicable queries
-        results             : list of per-query dicts
+    Run the benchmark and compute retrieval precision metrics (TSI + NNTR only).
+    Spec is excluded since it's now session-uploaded, not pre-ingested.
     """
     tsi_correct = tsi_total = 0
     nntr_correct = nntr_total = 0
@@ -233,14 +309,11 @@ def measure_retrieval_precision(n: int = 5, verbose: bool = True) -> dict:
     query_results = []
 
     for query, exp_tsi, exp_nntr in BENCHMARK_QUERIES:
-        is_english_query = not any(
-            c in query for c in "àâäéèêëîïôùûüçœæ"
-        )
-        result = tri_source_retrieve(query, n=n)
+        is_english_query = not any(c in query for c in "àâäéèêëîïôùûüçœæ")
+        result = retrieve_regulatory(query, n=n)
 
         tsi_hit = nntr_hit = None
 
-        # TSI precision
         if exp_tsi is not None and not result["tsi"]["empty"]:
             tsi_total += 1
             tsi_articles = [c["article"] for c in result["tsi"]["chunks"]]
@@ -249,7 +322,6 @@ def measure_retrieval_precision(n: int = 5, verbose: bool = True) -> dict:
                 tsi_correct += 1
             tsi_hit = hit
 
-        # NNTR precision + cross-lingual tracking
         if exp_nntr is not None and not result["nntr"]["empty"]:
             nntr_total += 1
             nntr_articles = [c["article"] for c in result["nntr"]["chunks"]]
@@ -258,20 +330,19 @@ def measure_retrieval_precision(n: int = 5, verbose: bool = True) -> dict:
                 nntr_correct += 1
             nntr_hit = hit
 
-            # Cross-lingual: count only when query is English
             if is_english_query:
                 cross_lingual_total += 1
                 if hit:
                     cross_lingual_correct += 1
 
         query_results.append({
-            "query":        query,
-            "exp_tsi":      exp_tsi,
-            "exp_nntr":     exp_nntr,
-            "tsi_hit":      tsi_hit,
-            "nntr_hit":     nntr_hit,
-            "tsi_top":      result["tsi"]["chunks"][0]["article"] if result["tsi"]["chunks"] else "—",
-            "nntr_top":     result["nntr"]["chunks"][0]["article"] if result["nntr"]["chunks"] else "—",
+            "query":    query,
+            "exp_tsi":  exp_tsi,
+            "exp_nntr": exp_nntr,
+            "tsi_hit":  tsi_hit,
+            "nntr_hit": nntr_hit,
+            "tsi_top":  result["tsi"]["chunks"][0]["article"] if result["tsi"]["chunks"] else "—",
+            "nntr_top": result["nntr"]["chunks"][0]["article"] if result["nntr"]["chunks"] else "—",
         })
 
         if verbose:
@@ -288,17 +359,16 @@ def measure_retrieval_precision(n: int = 5, verbose: bool = True) -> dict:
 
     if verbose:
         print()
-        print(f"  TSI retrieval precision:        {tsi_precision:.0%}  ({tsi_correct}/{tsi_total})")
-        print(f"  NNTR retrieval precision:       {nntr_precision:.0%}  ({nntr_correct}/{nntr_total})")
-        print(f"  Cross-lingual precision (EN→FR):{cross_lingual:.0%}  ({cross_lingual_correct}/{cross_lingual_total})")
-        print(f"  Overall precision:              {overall:.0%}  ({total_correct}/{total_q})")
-        print()
-        target_tsi = tsi_precision >= 0.8 if tsi_precision else False
+        print(f"  TSI retrieval precision:         {tsi_precision:.0%}  ({tsi_correct}/{tsi_total})")
+        print(f"  NNTR retrieval precision:        {nntr_precision:.0%}  ({nntr_correct}/{nntr_total})")
+        print(f"  Cross-lingual precision (EN→FR): {cross_lingual:.0%}  ({cross_lingual_correct}/{cross_lingual_total})")
+        print(f"  Overall precision:               {overall:.0%}  ({total_correct}/{total_q})")
+        target_tsi  = tsi_precision  >= 0.8 if tsi_precision  else False
         target_nntr = nntr_precision >= 0.7 if nntr_precision else False
-        target_xl  = cross_lingual >= 0.7 if cross_lingual else False
-        print(f"  Target TSI  ≥80%:  {'✓ PASS' if target_tsi  else '✗ FAIL — fix chunking'}")
-        print(f"  Target NNTR ≥70%:  {'✓ PASS' if target_nntr else '✗ FAIL — check NNTR ingestion'}")
-        print(f"  Target XL   ≥70%:  {'✓ PASS' if target_xl   else '✗ FAIL — bge-m3 cross-lingual issue'}")
+        target_xl   = cross_lingual  >= 0.7 if cross_lingual  else False
+        print(f"  Target TSI  ≥80%: {'✓ PASS' if target_tsi  else '✗ FAIL'}")
+        print(f"  Target NNTR ≥70%: {'✓ PASS' if target_nntr else '✗ FAIL'}")
+        print(f"  Target XL   ≥70%: {'✓ PASS' if target_xl   else '✗ FAIL'}")
 
     return {
         "tsi_precision":      tsi_precision,
@@ -313,18 +383,15 @@ def measure_retrieval_precision(n: int = 5, verbose: bool = True) -> dict:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="TrackMind retrieval module")
-    parser.add_argument("--query", "-q", type=str, default=None,
-                        help="Single ad-hoc query (shows top-3 per collection)")
-    parser.add_argument("--benchmark", "-b", action="store_true",
-                        help="Run full 10-query precision benchmark")
-    parser.add_argument("--n", type=int, default=5,
-                        help="Number of results per collection (default 5)")
+    parser.add_argument("--query", "-q", type=str, default=None)
+    parser.add_argument("--benchmark", "-b", action="store_true")
+    parser.add_argument("--n", type=int, default=5)
     args = parser.parse_args()
 
     if args.query:
         print(f"\n=== QUERY: {args.query} ===\n")
-        results = tri_source_retrieve(args.query, n=args.n)
-        for key in ("tsi", "nntr", "spec"):
+        results = retrieve_regulatory(args.query, n=args.n)
+        for key in ("tsi", "nntr"):
             data = results[key]
             print(f"[{data['label']}] ({data['lang']})")
             if data["empty"]:
@@ -339,25 +406,21 @@ if __name__ == "__main__":
         measure_retrieval_precision(n=args.n, verbose=True)
 
     else:
-        # Default: run the two core demo queries (cross-lingual test)
         print("\n=== CROSS-LINGUAL RETRIEVAL TEST ===")
-        print("English queries → should surface French Art. 49 from NNTR collection\n")
-
         demo_queries = [
             "passenger door single agent operation standard requirements",
             "door obstacle detection closing force kinetic energy limit",
         ]
         for q in demo_queries:
             print(f"Query: '{q}'")
-            results = tri_source_retrieve(q, n=3)
-            for key in ("tsi", "nntr", "spec"):
+            results = retrieve_regulatory(q, n=3)
+            for key in ("tsi", "nntr"):
                 data = results[key]
                 if data["empty"]:
                     print(f"  [{data['label']}] empty")
                     continue
                 top = data["chunks"][0]
                 lang_flag = "🇫🇷" if data["lang"] == "fr" else "🇬🇧"
-                print(f"  {lang_flag} [{data['label']}] "
-                      f"top={top['article']}  dist={top['distance']}")
+                print(f"  {lang_flag} [{data['label']}] top={top['article']}  dist={top['distance']}")
                 print(f"     {top['text'][:200].strip()}...")
             print()
