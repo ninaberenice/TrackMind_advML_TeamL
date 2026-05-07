@@ -3,33 +3,33 @@ api.py
 ======
 TrackMind AI — FastAPI backend.
 
-Exposes retrieval, reasoning and audit as REST endpoints so the HTML
-frontend can call them directly.
+Updated architecture:
+  - /upload-spec   NEW: accepts a spec PDF, chunks it in memory, stores in session cache
+  - /analyse       UPDATED: uses session spec chunks if available (no ChromaDB write)
+  - /decide        unchanged
+  - /audit/*       unchanged
+
+The spec PDF is never written to ChromaDB. It lives only in the server's
+in-memory session store (_SESSION_SPECS dict, keyed by session_id).
+This keeps manufacturer specs off the persistent vector DB.
 
 Run:
-    pip install fastapi uvicorn
+    pip install fastapi uvicorn python-multipart
     uvicorn api:app --reload --port 8000
-
-    # Then open: http://localhost:8000
-
-Mode selection:
-    The frontend controls Live API vs Mock Mode by sending:
-        mock=false  # Live API
-        mock=true   # Mock Mode
-    to the /analyse endpoint.
 """
 
 import os
-from fastapi import FastAPI, HTTPException
+import io
+import uuid
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="TrackMind AI", version="1.0.0")
+app = FastAPI(title="TrackMind AI", version="2.0.0")
 
-# Allow the HTML frontend (served from any origin during dev) to call the API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,7 +37,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_MOCK = False
+# ── In-memory session spec store ──────────────────────────────────────────────
+# key:   session_id (str UUID, returned at upload time)
+# value: list of chunk dicts (from trackmind_chunker.chunk_generic_from_bytes)
+_SESSION_SPECS: dict[str, dict] = {}
+# dict value shape: { "chunks": [...], "filename": str, "chunk_count": int }
+
 
 # ── Lazy-load heavy modules once ──────────────────────────────────────────────
 
@@ -49,8 +54,11 @@ _audit     = None
 def get_retrieval():
     global _retrieval
     if _retrieval is None:
-        from retrieval import tri_source_retrieve, format_context_for_llm, COLLECTIONS
-        _retrieval = (tri_source_retrieve, format_context_for_llm, COLLECTIONS)
+        from retrieval import (
+            retrieve_regulatory, retrieve_with_session_spec,
+            format_context_for_llm, COLLECTIONS
+        )
+        _retrieval = (retrieve_regulatory, retrieve_with_session_spec, format_context_for_llm, COLLECTIONS)
     return _retrieval
 
 
@@ -65,9 +73,7 @@ def get_reasoning():
 def get_audit():
     global _audit
     if _audit is None:
-        from audit import (
-            log_full_interaction, get_recent_entries, get_stats
-        )
+        from audit import log_full_interaction, get_recent_entries, get_stats
         _audit = (log_full_interaction, get_recent_entries, get_stats)
     return _audit
 
@@ -78,6 +84,7 @@ class AnalyseRequest(BaseModel):
     query: str
     n_chunks: int = 5
     mock: bool = False
+    session_id: str = ""   # links to uploaded spec; empty = regulatory-only mode
 
 
 class DecisionRequest(BaseModel):
@@ -90,17 +97,14 @@ class DecisionRequest(BaseModel):
     confidence_reason: str
     citations: list[str]
     raw_response: str
-    # retrieval context (top articles for audit)
     tsi_top: str = ""
     nntr_top: str = ""
     spec_top: str = ""
-    # assessor fields
     assessor_id: str = "NoBo-Assessor-001"
-    decision: str = "APPROVED"          # APPROVED / REJECTED / ESCALATED
+    decision: str = "APPROVED"
     notes: str = ""
     edited_explanation: str = ""
     edited_action: str = ""
-
     mock: bool = False
 
 
@@ -108,12 +112,12 @@ class DecisionRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "mock": _MOCK}
+    return {"status": "ok", "active_sessions": len(_SESSION_SPECS)}
 
 
 @app.get("/collections")
 def collections():
-    """Return status and chunk counts for all three ChromaDB collections."""
+    """Return status and chunk counts for permanent ChromaDB collections (TSI + NNTR only)."""
     import chromadb
     try:
         chroma = chromadb.PersistentClient(path="./chroma_db")
@@ -121,7 +125,6 @@ def collections():
         for name, label, lang in [
             ("tsi_loc_pas", "LOC&PAS TSI",  "EN"),
             ("nntr_france", "Arrêté 2012",   "FR"),
-            ("spec_doc",    "IberRail Spec", "EN"),
         ]:
             col = chroma.get_or_create_collection(name)
             cnt = col.count()
@@ -131,25 +134,108 @@ def collections():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/upload-spec")
+async def upload_spec(file: UploadFile = File(...)):
+    """
+    Accept a manufacturer spec PDF, chunk it in memory, store in session cache.
+
+    Returns a session_id the frontend passes back in subsequent /analyse calls.
+    The spec is NEVER written to ChromaDB.
+    """
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
+
+    try:
+        from trackmind_chunker import chunk_generic_from_bytes
+
+        pdf_bytes = await file.read()
+        chunks = chunk_generic_from_bytes(
+            pdf_bytes=pdf_bytes,
+            doc_type="SPEC",
+            source_name=file.filename,
+            language="en",
+        )
+
+        if not chunks:
+            raise HTTPException(
+                status_code=422,
+                detail="No text could be extracted from the uploaded PDF."
+            )
+
+        session_id = str(uuid.uuid4())
+        _SESSION_SPECS[session_id] = {
+            "chunks":      chunks,
+            "filename":    file.filename,
+            "chunk_count": len(chunks),
+        }
+
+        return {
+            "session_id":  session_id,
+            "filename":    file.filename,
+            "chunk_count": len(chunks),
+            "message":     (
+                f"Spec '{file.filename}' loaded into session memory. "
+                f"{len(chunks)} chunks ready. Spec is NOT stored in the vector database."
+            ),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
+
+
+@app.delete("/upload-spec/{session_id}")
+def clear_spec(session_id: str):
+    """Remove a spec from the session cache (e.g. when user uploads a new one)."""
+    if session_id in _SESSION_SPECS:
+        info = _SESSION_SPECS.pop(session_id)
+        return {"cleared": True, "filename": info["filename"]}
+    raise HTTPException(status_code=404, detail="Session not found.")
+
+
+@app.get("/upload-spec/{session_id}")
+def spec_info(session_id: str):
+    """Return info about a loaded spec session."""
+    if session_id not in _SESSION_SPECS:
+        raise HTTPException(status_code=404, detail="Session not found.")
+    info = _SESSION_SPECS[session_id]
+    return {
+        "session_id":  session_id,
+        "filename":    info["filename"],
+        "chunk_count": info["chunk_count"],
+    }
+
+
 @app.post("/analyse")
 def analyse(req: AnalyseRequest):
     """
     Full pipeline: retrieve → reason → confidence gate.
-    Returns everything the frontend needs to render the result.
+
+    If session_id is provided and valid, uses the session spec chunks for SPEC source.
+    Otherwise runs regulatory-only (TSI + NNTR) and notes spec is missing.
     """
-    mock = req.mock
     try:
-        tri_source_retrieve, format_context_for_llm, _ = get_retrieval()
+        _, _, format_context_for_llm, _ = get_retrieval()
         reason, confidence_gate = get_reasoning()
 
-        # Retrieve
-        retrieval = tri_source_retrieve(req.query, n=req.n_chunks)
-        context   = format_context_for_llm(retrieval)
+        # Resolve session spec
+        session_spec_chunks = None
+        spec_filename = None
+        if req.session_id and req.session_id in _SESSION_SPECS:
+            session_data = _SESSION_SPECS[req.session_id]
+            session_spec_chunks = session_data["chunks"]
+            spec_filename = session_data["filename"]
 
-        # Reason
-        response = reason(req.query, n_chunks=req.n_chunks, mock=mock)
+        # reason() now returns (ComplianceResponse, retrieval_dict)
+        response, retrieval = reason(
+            req.query,
+            n_chunks=req.n_chunks,
+            mock=req.mock,
+            session_spec_chunks=session_spec_chunks,
+        )
 
-        # Gate
+        # Confidence gate
         allow, gate_msg = confidence_gate(response)
 
         # Serialise retrieval chunks for the frontend document panel
@@ -179,12 +265,14 @@ def analyse(req: AnalyseRequest):
             "raw_response":       response.raw_response,
             "allow_draft":        allow,
             "gate_message":       gate_msg,
+            "spec_filename":      spec_filename,
+            "spec_loaded":        session_spec_chunks is not None,
             "retrieval": {
                 "tsi":  serialise_source(retrieval["tsi"]),
                 "nntr": serialise_source(retrieval["nntr"]),
                 "spec": serialise_source(retrieval["spec"]),
             },
-            # top articles for audit logging (sent back to client, used in /decide)
+            # top articles for audit logging
             "tsi_top":  retrieval["tsi"]["chunks"][0]["article"]  if retrieval["tsi"]["chunks"]  else "",
             "nntr_top": retrieval["nntr"]["chunks"][0]["article"] if retrieval["nntr"]["chunks"] else "",
             "spec_top": retrieval["spec"]["chunks"][0]["article"] if retrieval["spec"]["chunks"] else "",
@@ -200,7 +288,6 @@ def decide(req: DecisionRequest):
     try:
         log_full_interaction, _, _ = get_audit()
 
-        # Reconstruct a minimal object the audit module accepts
         class _Resp:
             pass
 
@@ -241,7 +328,6 @@ def decide(req: DecisionRequest):
 
 @app.get("/audit/recent")
 def audit_recent(n: int = 5):
-    """Return the n most recent audit log entries."""
     try:
         _, get_recent_entries, _ = get_audit()
         return get_recent_entries(n)
@@ -251,7 +337,6 @@ def audit_recent(n: int = 5):
 
 @app.get("/audit/stats")
 def audit_stats():
-    """Return summary statistics for the sidebar."""
     try:
         _, _, get_stats = get_audit()
         return get_stats()
@@ -263,11 +348,10 @@ def audit_stats():
 
 @app.get("/")
 def root():
-    return FileResponse("index.html")
+    return FileResponse("demo.html")
 
 @app.get("/{filepath:path}")
 def static_file(filepath: str):
-    """Serve static files (logo, etc.) from the same directory."""
     if os.path.isfile(filepath) and not filepath.startswith("."):
         return FileResponse(filepath)
     raise HTTPException(status_code=404, detail="Not found")

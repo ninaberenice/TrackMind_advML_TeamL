@@ -3,16 +3,14 @@ reasoning.py
 ============
 LLM reasoning layer for TrackMind.
 
-Takes retrieved context from all three document collections and produces
-a structured compliance position with confidence scoring (GREEN/AMBER/RED).
+Updated architecture:
+  - Takes retrieved context from TSI + NNTR (ChromaDB) and the uploaded spec
+    (in-memory, passed as pre-formatted context string).
+  - System prompt is now generic — IberRail-specific details come from the
+    uploaded spec document, not hardcoded assumptions.
+  - reason() accepts an optional `spec_context` string for session spec content.
 
-The system prompt encodes the regulatory hierarchy:
-  - EU TSI primacy (Directive 2016/797 Art. 4)
-  - French national rule (Arrêté du 19 mars 2012, Art. 49) as binding
-    for RFN operation even where it exceeds the TSI
-  - NF F31-054 as the French national standard referenced in Art. 49
-
-Primary LLM: Google Gemini 1.5 Flash (free tier, no credit card required).
+Primary LLM: Google Gemini 2.0 Flash (free tier).
   Get a free API key at: aistudio.google.com
   Set environment variable: GEMINI_API_KEY=your_key_here
 
@@ -28,20 +26,21 @@ import re
 import os
 import argparse
 from dataclasses import dataclass
-from retrieval import tri_source_retrieve, format_context_for_llm
+from retrieval import retrieve_regulatory, retrieve_with_session_spec, format_context_for_llm
 
 # ── System Prompt ─────────────────────────────────────────────────────────────
 
 SYSTEM_PROMPT = """You are a TSI compliance reasoning engine for EU railway certification.
 
-You receive retrieved chunks from three independent document sources:
+You receive retrieved chunks from up to three document sources:
 
   - TSI:  LOC&PAS Commission Regulation (EU) 1302/2014 (consolidated to 2025) — English
   - NNTR: Arrêté du 19 mars 2012 fixant les objectifs, les méthodes, les indicateurs
           de sécurité et la réglementation technique applicable sur le réseau ferré national
           (French national rule) — French language
-  - SPEC: IberRail IB-EMU-450 technical specification Rev. 4.0 — English
-          (Cross-border authorisation submission for French RFN operation)
+  - SPEC: Manufacturer's technical specification uploaded for this session — English
+          (This is the document under assessment. Treat its claims as the manufacturer's
+          stated position, to be validated against TSI and NNTR requirements.)
 
 REGULATORY HIERARCHY (apply this in every response):
 
@@ -66,52 +65,42 @@ REGULATORY HIERARCHY (apply this in every response):
 
 4. EN 14752: The European standard referenced in LOC&PAS TSI Art. 4.2.3.1 for door
    obstacle detection. Single worst-case position test only. Does NOT satisfy NF F31-054
-   Section 6.3 for French RFN operation — this is Conflict 1.
+   Section 6.3 for French RFN operation — potential conflict if spec only references EN 14752.
 
-RULES (non-negotiable):
+ASSESSMENT RULES (non-negotiable):
 - Cite the specific article/section number for EVERY factual claim
+- Compare the SPEC claims directly against TSI and NNTR requirements on each parameter
 - If the same parameter is covered by both TSI and NNTR with different requirements,
   identify this as a CONFLICT and explain which takes precedence and why
-- If a relevant article is missing from any collection, say so explicitly — do not invent
+- If the SPEC satisfies both TSI and NNTR on a parameter, state COMPLIANT for that parameter
+- If a relevant article is missing from the SPEC or regulatory sources, say so explicitly
+- If the SPEC is not uploaded (source shows "No document available"), assess only the
+  regulatory landscape and note that a spec is required for full compliance assessment
 - Never guess. If evidence is insufficient, use RED tier and explain the gap
-- Keep the reasoning concise — the NoBo assessor reads dozens of these per day
-- If the NNTR chunk is in French, you may reason from it directly — do not refuse
+- Keep reasoning concise — the NoBo assessor reads dozens of these per day
+- If the NNTR chunk is in French, reason from it directly — do not refuse
 
-TWO KNOWN CONFLICTS FOR THIS SCENARIO (IberRail IB-EMU-450, French RFN):
-
-  CONFLICT 1 — Obstacle detection test protocol:
-    TSI Art. 4.2.3.1 references EN 14752 Cl. 7.2 (single position, 150 N max, 30 mm).
-    Arrêté 2012 Art. 49 via NF F31-054 Sec. 6.3 requires 5 height positions,
-    100 N max per position, ≤1.5 J kinetic energy. IberRail FAT covers EN 14752 only.
-    → Supplementary NF F31-054 testing required for French authorisation.
-
-  CONFLICT 2 — Single-agent operation (CAS):
-    TSI contains NO specific requirements for CAS door systems.
-    Arrêté 2012 Art. 49 mandates NF F31-054 for ALL CAS-operated trains on RFN.
-    French TER services are CAS-operated.
-    → Four functional gaps must be resolved: platform surveillance, closure confirmation
-      interlock, alarm door-lock behaviour, and re-closure dwell time.
-
-OUTPUT FORMAT (strict — machine-parsed by confidence gating logic):
+OUTPUT FORMAT (strict — machine-parsed):
 
 VERDICT: [COMPLIANT / CONFLICT DETECTED / INSUFFICIENT DATA]
 
 EXPLANATION:
 [2-4 sentences of reasoning with explicit article citations.
- If multiple conflicts exist, list each as a numbered item.
- Reference TSI, NNTR, and SPEC chunks by their collection label (e.g. [TSI-1], [NNTR-2]).]
+ If multiple conflicts or compliance points exist, list each as a numbered item.
+ Reference source chunks by collection label e.g. [TSI-1], [NNTR-2], [SPEC-1].]
 
 RECOMMENDED ACTION:
 [1-3 concrete actions the engineer must take. Be specific — name the standard, test,
- or document required. Avoid generic advice.]
+ or document required. If COMPLIANT, state what evidence confirms compliance.
+ If no spec is uploaded, state that a manufacturer spec must be provided.]
 
 CONFIDENCE: [GREEN / AMBER / RED] — [XX%] — [one-sentence reason for this tier]
 
 CITATIONS: [comma-separated list of article/section references used]
 
 CONFIDENCE TIER DEFINITIONS:
-  GREEN  (>90%): All relevant articles found in retrieved context. Conflict position
-                 clearly supported by source text. Safe for NoBo review.
+  GREEN  (>90%): All relevant articles found in retrieved context. Position clearly
+                 supported by source text. Safe for NoBo review.
   AMBER (70-90%): Relevant articles found but position involves inference across
                   sources, or one source is missing/incomplete. Requires elevated review.
   RED   (<70%):  Key source documents missing, or question outside ingested scope.
@@ -187,17 +176,17 @@ def _parse_response(raw: str, query: str, context: str) -> ComplianceResponse:
 _MOCK_RESPONSE = """VERDICT: CONFLICT DETECTED
 
 EXPLANATION:
-1. Conflict 1 (Obstacle detection protocol): TSI Art. 4.2.3.1 references EN 14752 Cl. 7.2, which requires a single worst-case position test at ≤150 N and 30 mm minimum obstacle diameter [TSI-1]. Arrêté 19 mars 2012 Art. 49, via NF F31-054 Sec. 6.3, requires testing at 5 defined height positions (250, 500, 900, 1300, and 1600 mm above door sill) with a ≤100 N force limit and ≤1.5 J kinetic energy limit per position [NNTR-1]. IberRail's existing FAT (IB-EMU-450-TEST-012) satisfies EN 14752 only and does NOT satisfy NF F31-054 Sec. 6.3 [SPEC-1].
-2. Conflict 2 (Single-agent operation): The LOC&PAS TSI contains no requirements specific to CAS-operated door systems. Art. 49 mandates NF F31-054 compliance for all CAS trains on the RFN, requiring platform surveillance via CCTV, two-step closure confirmation interlock, door lock-open on passenger alarm, and 5 s re-closure dwell [NNTR-2]. These are full gaps versus the TSI baseline.
+1. Conflict 1 (Obstacle detection protocol): TSI Art. 4.2.3.1 references EN 14752 Cl. 7.2, which requires a single worst-case position test at ≤150 N and 30 mm minimum obstacle diameter [TSI-1]. Arrêté 19 mars 2012 Art. 49, via NF F31-054 Sec. 6.3, requires testing at 5 defined height positions (250, 500, 900, 1300, and 1600 mm above door sill) with a ≤100 N force limit and ≤1.5 J kinetic energy limit per position [NNTR-1]. The uploaded spec satisfies EN 14752 only and does NOT satisfy NF F31-054 Sec. 6.3 [SPEC-1].
+2. Conflict 2 (Single-agent operation): The LOC&PAS TSI contains no requirements specific to CAS-operated door systems [TSI-3]. Art. 49 mandates NF F31-054 compliance for all CAS trains on the RFN, requiring platform surveillance via CCTV, two-step closure confirmation interlock, door lock-open on passenger alarm, and 5 s re-closure dwell [NNTR-2]. These are full gaps versus the TSI baseline.
 
 RECOMMENDED ACTION:
-1. Commission supplementary FAT at BODE GmbH per NF F31-054 Sec. 6.3 (5 height positions + kinetic energy measurement). Refer to open issue OI-003. Target: May 2026.
-2. Confirm DCU-3100 software parameters CAS_CONFIRM_TIMEOUT ≤25 s and CAS_ALARM_LOCK = TRUE are set per CERTIFER's OI-004 findings before final NF F31-054 conformity assessment.
-3. Do not submit AMEC application to EPSF until CERTIFER's final NF F31-054 assessment report is received.
+1. Commission supplementary FAT per NF F31-054 Sec. 6.3 (5 height positions + kinetic energy measurement).
+2. Verify DCU software CAS parameters meet NF F31-054 CAS functional requirements before final conformity assessment.
+3. Do not submit AMEC application to EPSF until NF F31-054 assessment report is received.
 
-CONFIDENCE: GREEN — 92% — Both conflicts are directly documented in retrieved NNTR Art. 49 and SPEC TS-004 chunks. No inference required.
+CONFIDENCE: GREEN — 92% — Both conflicts are directly documented in retrieved NNTR Art. 49 and SPEC chunks. No inference required.
 
-CITATIONS: TSI Art. 4.2.3.1, Arrêté 2012 Art. 49, NF F31-054 Sec. 6.3, EN 14752 Cl. 7.2, IB-EMU-450-TS-004 Rev. 4.0 Sec. 4.2.3, IB-EMU-450-TS-004 Rev. 4.0 Sec. 4.3.1
+CITATIONS: TSI Art. 4.2.3.1, Arrêté 2012 Art. 49, NF F31-054 Sec. 6.3, EN 14752 Cl. 7.2
 """
 
 
@@ -205,9 +194,8 @@ CITATIONS: TSI Art. 4.2.3.1, Arrêté 2012 Art. 49, NF F31-054 Sec. 6.3, EN 1475
 
 def _call_gemini(context: str, query: str) -> str:
     """
-    Call Google Gemini 1.5 Flash via the free REST API.
+    Call Google Gemini 2.0 Flash via the free REST API.
     Requires GEMINI_API_KEY environment variable.
-    Get a free key at: aistudio.google.com (no credit card needed).
     """
     import requests
 
@@ -216,10 +204,10 @@ def _call_gemini(context: str, query: str) -> str:
         raise ValueError(
             "GEMINI_API_KEY not set. "
             "Get a free key at aistudio.google.com and run: "
-            "set GEMINI_API_KEY=your_key_here"
+            "export GEMINI_API_KEY=your_key_here"
         )
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={api_key}"
 
     payload = {
         "system_instruction": {
@@ -238,8 +226,8 @@ def _call_gemini(context: str, query: str) -> str:
             }
         ],
         "generationConfig": {
-            "temperature": 0.1,   # low temp for consistent structured output
-            "maxOutputTokens": 1000,
+            "temperature": 0.1,
+            "maxOutputTokens": 1200,
         }
     }
 
@@ -255,6 +243,7 @@ def reason(
     query: str,
     n_chunks: int = 5,
     mock: bool = False,
+    session_spec_chunks: list[dict] | None = None,
 ) -> ComplianceResponse:
     """
     Full pipeline: retrieve → assemble context → LLM reason → parse response.
@@ -267,10 +256,29 @@ def reason(
         Chunks per collection to retrieve (default 5).
     mock : bool
         If True, skip the API call and return the canned mock response.
-        Use for demos without internet or as backup if Gemini is unavailable.
+    session_spec_chunks : list[dict] | None
+        In-memory spec chunks from the uploaded PDF (from trackmind_chunker).
+        If None or empty, the spec slot in context will show "No document available"
+        and the LLM will assess the regulatory landscape only.
     """
-    retrieval = tri_source_retrieve(query, n=n_chunks)
-    context   = format_context_for_llm(retrieval)
+    if session_spec_chunks:
+        retrieval = retrieve_with_session_spec(query, session_spec_chunks, n=n_chunks)
+    else:
+        # Regulatory-only: TSI + NNTR from ChromaDB, empty spec slot
+        reg = retrieve_regulatory(query, n=n_chunks)
+        retrieval = {
+            "tsi":  reg["tsi"],
+            "nntr": reg["nntr"],
+            "spec": {
+                "results": None,
+                "chunks":  [],
+                "label":   "Spec (no file uploaded)",
+                "lang":    "en",
+                "empty":   True,
+            },
+        }
+
+    context = format_context_for_llm(retrieval)
 
     if mock:
         raw = _MOCK_RESPONSE
@@ -278,7 +286,6 @@ def reason(
         try:
             raw = _call_gemini(context, query)
         except Exception as e:
-            # Graceful degradation: RED tier with error message
             raw = (
                 f"VERDICT: INSUFFICIENT DATA\n\n"
                 f"EXPLANATION:\nAPI call failed: {e}. Retrieved context is available "
@@ -289,7 +296,7 @@ def reason(
                 f"CITATIONS: N/A"
             )
 
-    return _parse_response(raw, query, context)
+    return _parse_response(raw, query, context), retrieval
 
 
 def confidence_gate(response: ComplianceResponse) -> tuple[bool, str]:
@@ -336,21 +343,20 @@ def format_response_display(response: ComplianceResponse) -> str:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="TrackMind reasoning module")
     parser.add_argument("--query", "-q", type=str, default=None)
-    parser.add_argument("--mock", "-m", action="store_true",
-                        help="Use mock response (no API call)")
+    parser.add_argument("--mock", "-m", action="store_true")
     parser.add_argument("--n", type=int, default=5)
     args = parser.parse_args()
 
     demo_queries = [
-        "Does IberRail's door obstacle detection testing satisfy French RFN requirements under Arrêté 2012 Article 49?",
-        "What are the CAS single-agent operation requirements for the IB-EMU-450 on French TER services?",
+        "Does the uploaded spec's door obstacle detection testing satisfy French RFN requirements under Arrêté 2012 Article 49?",
+        "What are the CAS single-agent operation requirements on French TER services?",
     ]
 
     queries_to_run = [args.query] if args.query else demo_queries
 
     for q in queries_to_run:
         print(f"\nQuery: {q}\n")
-        response = reason(q, n_chunks=args.n, mock=args.mock)
+        response, _ = reason(q, n_chunks=args.n, mock=args.mock)
         print(format_response_display(response))
         allow, gate_msg = confidence_gate(response)
         print(f"\nGating: {gate_msg}\n")
