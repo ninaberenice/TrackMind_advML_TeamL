@@ -514,7 +514,11 @@
   function downloadComplianceRecord() { if (!latestRecordUrl) { toast('No compliance record generated yet.', 'error'); return; } const a = document.createElement('a'); a.href = latestRecordUrl; a.download = latestRecordName; document.body.appendChild(a); a.click(); a.remove(); }
 
   function resetForNewAnalysis() {
-    lastVerdict = null; lastQuery = ''; editingHistoryQuery = null;
+      if (sessionId) {
+        fetch(`${API_BASE}/upload-spec/${sessionId}`, { method: 'DELETE' }).catch(() => {});
+        sessionId = '';
+      }
+      lastVerdict = null; lastQuery = ''; editingHistoryQuery = null;
     if (latestRecordUrl) URL.revokeObjectURL(latestRecordUrl);
     latestRecordUrl = null; latestRecordName = ''; qInput.value = ''; aBtn.disabled = true; fi.value = '';
     $('uploaded').classList.remove('active'); dz.style.display = 'flex'; $('results').classList.remove('active'); $('results-empty').style.display = 'block'; $('results-loading').classList.remove('active'); $('record-export').classList.remove('active');

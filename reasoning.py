@@ -208,7 +208,7 @@ def _call_claude(context: str, query: str) -> str:
     }
     payload = {
         "model": "claude-sonnet-4-5",
-        "max_tokens": 1000,
+        "max_tokens": 2000,
         "system": SYSTEM_PROMPT,
         "messages": [
             {

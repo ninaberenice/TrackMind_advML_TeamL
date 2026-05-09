@@ -222,6 +222,61 @@ def chunk_generic(pdf_path: str, doc_type: str, language: str = 'en') -> list[di
 
 # ── Generic chunker (in-memory bytes) — NEW for uploaded spec ────────────────
 
+def _chunk_spec_text(full_text: str, doc_type: str, source_name: str) -> list[dict]:
+    # Strip repeated page headers/footers
+    lines = full_text.split('\n')
+    cleaned_lines = [
+        l for l in lines
+        if 'IberRail S.A.' not in l
+        and 'iberrail.es' not in l
+        and 'TECHNICAL SPECIFICATION' not in l
+        and 'Passenger Door & Access' not in l
+        and 'RESTRICTED' not in l
+        and not l.strip().startswith('Page ')
+        and not (l.strip().isdigit())
+    ]
+    full_text = '\n'.join(cleaned_lines)
+    full_text = re.sub(r'\n{3,}', '\n\n', full_text)
+    combined_pattern = re.compile(
+        r'(?=\n\d+\.\d+[\.\d]*\s+[A-Z])'
+        r'|(?=\nOI-\d+\s)'
+        r'|(?=\nV-\d+\s)'
+    )
+    raw_chunks = combined_pattern.split(full_text)
+    _SEC_ID_RE = re.compile(r'^(\d+\.\d+[\.\d]*)')
+    _OI_ID_RE  = re.compile(r'^(OI-\d+)')
+    _V_ID_RE   = re.compile(r'^(V-\d+)')
+    chunks = []
+    for i, piece in enumerate(raw_chunks):
+        piece = piece.strip()
+        if len(piece) < 200:
+            continue
+        sec_match = _SEC_ID_RE.match(piece)
+        oi_match  = _OI_ID_RE.match(piece)
+        v_match   = _V_ID_RE.match(piece)
+        if sec_match:
+            article_id = sec_match.group(1).rstrip('.')
+        elif oi_match:
+            article_id = oi_match.group(1)
+        elif v_match:
+            article_id = v_match.group(1)
+        else:
+            article_id = f'section_{i}'
+        header = f"[IberRail IB-EMU-450, {article_id}] "
+        chunks.append({
+            'id': f'{doc_type}_{i}',
+            'text': header + piece,
+            'metadata': {
+                'article': article_id,
+                'doc_type': doc_type,
+                'subsystem': 'general',
+                'chunk_index': i,
+                'source_file': source_name,
+                'language': 'en',
+            },
+        })
+    return chunks
+
 def chunk_generic_from_bytes(
     pdf_bytes: bytes,
     doc_type: str = 'SPEC',
@@ -263,7 +318,7 @@ def chunk_generic_from_bytes(
         print(f'  WARNING: No text extracted from {source_name}.')
         return []
 
-    chunks = _chunk_text_to_fixed_size(full_text, doc_type, language, source_file=source_name)
+    chunks = _chunk_spec_text(full_text, doc_type, source_name)
     print(f'  Spec ready: {len(chunks)} chunks in memory (not persisted to DB).')
     return chunks
 

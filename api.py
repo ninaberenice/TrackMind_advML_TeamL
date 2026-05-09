@@ -246,7 +246,7 @@ def analyse(req: AnalyseRequest):
                 "empty":  data["empty"],
                 "chunks": [
                     {
-                        "text":     c["text"][:370],
+                        "text":     c["text"],
                         "article":  c["article"],
                         "distance": c["distance"],
                     }
