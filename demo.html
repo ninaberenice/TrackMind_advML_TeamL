@@ -31,7 +31,7 @@
   <div class="nav-inner">
     <a href="index.html" class="brand"><img src="logo_images/trackmind_logo2.png" class="brand-logo" alt="TrackMind logo"></a>
     <nav class="nav-links"><a href="index.html#problem">Problem</a><a href="index.html#solution">Solution</a><a href="index.html#impact">Impact</a><a href="index.html#moat">Why Us</a></nav>
-    <div class="nav-mode"><button id="btn-live" class="nav-status status-live" onclick="setMode('live')"><span class="status-dot"></span> Live API</button><button id="btn-mock" class="nav-status status-mock inactive mode-tip" onclick="setMode('mock')" data-tip="Mock Mode uses canned LLM responses while keeping the same retrieval flow."><span class="status-dot"></span> Mock Mode</button></div>
+    <div class="nav-mode"><button id="btn-live" class="nav-status status-live" onclick="setMode('live')"><span class="status-dot"></span> Live API</button><button id="btn-mock" class="nav-status status-mock inactive mode-tip" onclick="setMode('mock')" data-tip="Mock Mode uses canned LLM responses while keeping the same retrieval flow." style="display:none"><span class="status-dot"></span> Mock Mode</button></div>
   </div>
 </header>
 
@@ -111,9 +111,8 @@
     <section class="step" id="session-dashboard">
       <div class="step-head"><div><h2 class="step-title">Session dashboard</h2><p class="step-desc">Audit stats and query history for this session.</p></div></div>
       <div class="audit-stats">
-        <div class="stat"><span class="stat-num ok" id="stat-approved">0</span><span class="stat-lab">Approved</span></div>
+        <div class="stat"><span class="stat-num ok" id="stat-approved">0</span><span class="stat-lab">Accepted</span></div>
         <div class="stat"><span class="stat-num bad" id="stat-rejected">0</span><span class="stat-lab">Rejected</span></div>
-        <div class="stat"><span class="stat-num escalated" id="stat-escalated">0</span><span class="stat-lab">Escalated</span></div>
         <div class="stat"><span class="stat-num warn" id="stat-pending">0</span><span class="stat-lab">Pending</span></div>
         <div class="stat"><span class="stat-num ok" id="stat-time-saved">0h 0min</span><span class="stat-lab">Estimated time saved</span></div>
       </div>
@@ -217,10 +216,9 @@
   function loadAuditStats() {
     $('stat-approved').textContent = sessionStats.approved;
     $('stat-rejected').textContent = sessionStats.rejected;
-    $('stat-escalated').textContent = sessionStats.escalated;
     $('stat-pending').textContent = sessionStats.pending;
     $('stat-time-saved').textContent = formatTimeSaved();
-  }
+}
 
   function formatTimeSaved() {
     const entries = Object.values(sessionHistory);
@@ -278,7 +276,9 @@
     }
 
     $('file-name').textContent = file.name;
-    $('file-size').textContent = 'Uploading and chunking…';
+    $('file-size').textContent = 'Processing your specification…';
+    $('uploaded').classList.add('active');
+    dz.style.display = 'none';
 
     const fd = new FormData();
     fd.append('file', file);
@@ -388,7 +388,7 @@
   }
 
   $('approve-btn').addEventListener('click', () => decide('APPROVED'));
-  $('reject-btn').addEventListener('click', () => decide(lastVerdict?.allow_draft ? 'REJECTED' : 'ESCALATED'));
+  $('reject-btn').addEventListener('click', () => decide('REJECTED'));
   $('download-record-btn').addEventListener('click', downloadComplianceRecord);
   $('new-analysis-btn').addEventListener('click', resetForNewAnalysis);
   $('hm-edit-btn').addEventListener('click', editHistoryQuery);
@@ -405,11 +405,9 @@
       const previousReview = sessionHistory[lastQuery]?._review || null;
       if (previousReview?.decision === 'APPROVED' && sessionStats.approved > 0) sessionStats.approved -= 1;
       if (previousReview?.decision === 'REJECTED' && sessionStats.rejected > 0) sessionStats.rejected -= 1;
-      if (previousReview?.decision === 'ESCALATED' && sessionStats.escalated > 0) sessionStats.escalated -= 1;
       if (!previousReview && sessionStats.pending > 0) sessionStats.pending -= 1;
       if (finalDecision === 'APPROVED') sessionStats.approved += 1;
       if (finalDecision === 'REJECTED') sessionStats.rejected += 1;
-      if (finalDecision === 'ESCALATED') sessionStats.escalated += 1;
 
       if (sessionHistory[lastQuery]) { sessionHistory[lastQuery]._review = { decision: finalDecision, explanation: $('review-explanation').value, action: $('review-action').value, notes }; lastVerdict._review = sessionHistory[lastQuery]._review; }
       editingHistoryQuery = null; $('approve-btn').disabled = true; $('reject-btn').disabled = true;
@@ -540,7 +538,7 @@
   }
 
   function formatNumberedPlain(text) { return getNumberedItems(text).map((item, i) => `${i + 1}. ${item}`).join('\n\n'); }
-  function formatNumberedHtml(text) { return getNumberedItems(text).map((item, i) => `<p><strong>${i + 1}.</strong> ${escapeHtml(item)}</p>`).join(''); }
+  function formatNumberedHtml(text) { return getNumberedItems(text).map((item, i) => { const stripped = item.replace(/\*\*(.*?)\*\*/g, '$1'); return `<p><strong>${i + 1}.</strong> ${escapeHtml(stripped)}</p>`; }).join(''); }
   function fitTextareaToContent(el) { el.style.height = '0px'; el.style.height = `${el.scrollHeight}px`; }
   function fitModelTextareas() { ['review-explanation','review-action','review-notes'].forEach(id => fitTextareaToContent($(id))); }
   ['review-explanation','review-action','review-notes'].forEach(id => $(id).addEventListener('input', e => fitTextareaToContent(e.target)));

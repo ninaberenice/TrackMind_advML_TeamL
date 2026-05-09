@@ -156,6 +156,10 @@ async def upload_spec(file: UploadFile = File(...)):
             language="en",
         )
 
+        from retrieval import embed
+        for chunk in chunks:
+            chunk["_embedding"] = embed(chunk["text"])
+
         if not chunks:
             raise HTTPException(
                 status_code=422,
