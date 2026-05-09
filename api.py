@@ -108,7 +108,7 @@ class DecisionRequest(BaseModel):
     mock: bool = False
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────test
+# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.get("/health")
 def health():

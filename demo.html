@@ -134,6 +134,15 @@
   </div>
 </footer>
 
+<div id="chunk-modal" class="modal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-card">
+    <button onclick="document.getElementById('chunk-modal').style.display='none'" class="modal-close">✕</button>
+    <p class="eyebrow" id="chunk-modal-lang"></p>
+    <p id="chunk-modal-src" class="modal-query"></p>
+    <div id="chunk-modal-text" class="field-text" style="white-space:pre-wrap;line-height:1.7;font-size:13px;margin-top:12px;"></div>
+  </div>
+</div>
+
 <div id="history-modal" class="modal">
   <div class="modal-card">
     <button onclick="document.getElementById('history-modal').style.display='none'" class="modal-close">✕</button>
@@ -317,7 +326,11 @@
 
       const makeChunk = (c, i) => {
         const det = document.createElement('details'); det.className = `chunk ${key}`; det.open = i === 0;
-        det.innerHTML = `<summary><span class="chunk-ref ${key}">[${key.toUpperCase()}-${i + 1}]</span><span class="chunk-src">${escapeHtml(c.src)}</span><span class="chunk-meta"><span class="lang-badge ${(c.lang||'EN').toLowerCase()}">${escapeHtml(c.lang||'EN')}</span><svg class="chevron"><use href="#i-chevron-right"/></svg></span></summary><p class="chunk-text">${escapeHtml(c.text||'')}</p>`;
+        det.innerHTML = `<summary><span class="chunk-ref ${key}">[${key.toUpperCase()}-${i + 1}]</span><span class="chunk-src">${escapeHtml(c.src)}</span><span class="chunk-meta"><span class="lang-badge ${(c.lang||'EN').toLowerCase()}">${escapeHtml(c.lang||'EN')}</span><svg class="chevron"><use href="#i-chevron-right"/></svg></span></summary><p class="chunk-text">${escapeHtml(truncateClean(c.text||'', 300))}</p><button class="btn-view-full">View full text ↗</button>`;
+        det.querySelector('.btn-view-full').addEventListener('click', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          openChunkModal(c.src, c.text || '', (c.lang||'EN').toLowerCase());
+        });
         return det;
       };
 
@@ -528,6 +541,20 @@
   function fitModelTextareas() { ['review-explanation','review-action','review-notes'].forEach(id => fitTextareaToContent($(id))); }
   ['review-explanation','review-action','review-notes'].forEach(id => $(id).addEventListener('input', e => fitTextareaToContent(e.target)));
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function truncateClean(text, max) {
+    if (text.length <= max) return text;
+    const cut = text.slice(0, max);
+    const lastDot = cut.lastIndexOf('.');
+    const lastSpace = cut.lastIndexOf(' ');
+    const end = lastDot > max - 80 ? lastDot + 1 : lastSpace > max - 40 ? lastSpace : max;
+    return text.slice(0, end) + '…';
+  }
+  function openChunkModal(src, text, lang) {
+    document.getElementById('chunk-modal-src').textContent = src;
+    document.getElementById('chunk-modal-text').textContent = text.replace(/\n+/g, ' ').trim();
+    document.getElementById('chunk-modal-lang').textContent = lang === 'fr' ? '🇫🇷 French source' : '🇬🇧 English source';
+    document.getElementById('chunk-modal').style.display = 'block';
+  }
 
   $('audit-search').addEventListener('input', function() {
     const term = this.value.toLowerCase();

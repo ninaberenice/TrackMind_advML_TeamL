@@ -298,3 +298,85 @@ def _chunk_text_to_fixed_size(
             },
         })
     return chunks
+
+# ── SpecDoc: IberRail Technical Specification ─────────────────────────────────
+
+def chunk_spec_doc(pdf_path: str, doc_type: str = 'SPEC_DOC') -> list[dict]:
+    """
+    Section-level chunker for the IberRail IB-EMU-450 technical specification.
+    Splits on numbered section headers (1.1, 4.2.3 etc), open issues (OI-001)
+    and verification items (V-001).
+    """
+    print(f'  Reading {pdf_path} (spec chunker)...')
+    doc = fitz.open(pdf_path)
+
+    pages = []
+    for page in doc:
+        text = page.get_text()
+        lines = text.split('\n')
+        cleaned = [
+            l for l in lines
+            if 'IberRail S.A.' not in l
+            and 'iberrail.es' not in l
+            and 'TECHNICAL SPECIFICATION' not in l
+            and 'Passenger Door & Access' not in l
+            and 'RESTRICTED' not in l
+            and not l.strip().startswith('Page ')
+            and not (l.strip().isdigit())
+        ]
+        pages.append('\n'.join(cleaned))
+    raw_text = '\n'.join(pages)
+    raw_text = re.sub(r'\n{3,}', '\n\n', raw_text)
+
+    if not raw_text.strip():
+        print(f'  WARNING: No text extracted from {pdf_path}.')
+        return []
+
+    combined_pattern = re.compile(
+        r'(?=\n\d+\.\d+[\.\d]*\s+[A-Z])'
+        r'|(?=\nOI-\d+\s)'
+        r'|(?=\nV-\d+\s)'
+    )
+    raw_chunks = combined_pattern.split(raw_text)
+
+    _SEC_ID_RE = re.compile(r'^(\d+\.\d+[\.\d]*)')
+    _OI_ID_RE  = re.compile(r'^(OI-\d+)')
+    _V_ID_RE   = re.compile(r'^(V-\d+)')
+
+    chunks = []
+    for i, piece in enumerate(raw_chunks):
+        piece = piece.strip()
+        if len(piece) < 200:
+            continue
+
+        sec_match = _SEC_ID_RE.match(piece)
+        oi_match  = _OI_ID_RE.match(piece)
+        v_match   = _V_ID_RE.match(piece)
+
+        if sec_match:
+            article_id = sec_match.group(1).rstrip('.')
+        elif oi_match:
+            article_id = oi_match.group(1)
+        elif v_match:
+            article_id = v_match.group(1)
+        else:
+            article_id = f'section_{i}'
+
+        header = f"[IberRail IB-EMU-450, {article_id}] "
+        augmented_text = header + piece
+
+        chunks.append({
+            'id': f'{doc_type}_{i}',
+            'text': augmented_text,
+            'metadata': {
+                'article': article_id,
+                'doc_type': doc_type,
+                'subsystem': 'general',
+                'chunk_index': i,
+                'source_file': pdf_path,
+                'language': 'en',
+            },
+        })
+
+    print(f'  Extracted {len(chunks)} chunks from SpecDoc.')
+    return chunks
