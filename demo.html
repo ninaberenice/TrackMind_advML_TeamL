@@ -31,7 +31,7 @@
   <div class="nav-inner">
     <a href="index.html" class="brand"><img src="logo_images/trackmind_logo2.png" class="brand-logo" alt="TrackMind logo"></a>
     <nav class="nav-links"><a href="index.html#problem">Problem</a><a href="index.html#solution">Solution</a><a href="index.html#impact">Impact</a><a href="index.html#moat">Why Us</a></nav>
-    <div class="nav-mode"><button id="btn-live" class="nav-status status-live" onclick="setMode('live')"><span class="status-dot"></span> Live API</button><button id="btn-mock" class="nav-status status-mock inactive mode-tip" onclick="setMode('mock')" data-tip="Mock Mode uses canned LLM responses while keeping the same retrieval flow."><span class="status-dot"></span> Mock Mode</button></div>
+    <div class="nav-mode"><button id="btn-live" class="nav-status status-live" onclick="setMode('live')"><span class="status-dot"></span> Live API</button><button id="btn-mock" class="nav-status status-mock inactive mode-tip" onclick="setMode('mock')" data-tip="Mock Mode uses canned LLM responses while keeping the same retrieval flow." style="display:none"><span class="status-dot"></span> Mock Mode</button></div>
   </div>
 </header>
 
@@ -111,9 +111,8 @@
     <section class="step" id="session-dashboard">
       <div class="step-head"><div><h2 class="step-title">Session dashboard</h2><p class="step-desc">Audit stats and query history for this session.</p></div></div>
       <div class="audit-stats">
-        <div class="stat"><span class="stat-num ok" id="stat-approved">0</span><span class="stat-lab">Approved</span></div>
+        <div class="stat"><span class="stat-num ok" id="stat-approved">0</span><span class="stat-lab">Accepted</span></div>
         <div class="stat"><span class="stat-num bad" id="stat-rejected">0</span><span class="stat-lab">Rejected</span></div>
-        <div class="stat"><span class="stat-num escalated" id="stat-escalated">0</span><span class="stat-lab">Escalated</span></div>
         <div class="stat"><span class="stat-num warn" id="stat-pending">0</span><span class="stat-lab">Pending</span></div>
         <div class="stat"><span class="stat-num ok" id="stat-time-saved">0h 0min</span><span class="stat-lab">Estimated time saved</span></div>
       </div>
@@ -133,6 +132,15 @@
     <div class="footer-meta"><p>© 2026 TrackMind · AI-powered compliance intelligence for European railway certification.</p><p>AI drafts only. Final compliance positions require assessor approval.</p></div>
   </div>
 </footer>
+
+<div id="chunk-modal" class="modal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal-card">
+    <button onclick="document.getElementById('chunk-modal').style.display='none'" class="modal-close">✕</button>
+    <p class="eyebrow" id="chunk-modal-lang"></p>
+    <p id="chunk-modal-src" class="modal-query"></p>
+    <div id="chunk-modal-text" class="field-text" style="white-space:pre-wrap;line-height:1.7;font-size:13px;margin-top:12px;"></div>
+  </div>
+</div>
 
 <div id="history-modal" class="modal">
   <div class="modal-card">
@@ -208,10 +216,9 @@
   function loadAuditStats() {
     $('stat-approved').textContent = sessionStats.approved;
     $('stat-rejected').textContent = sessionStats.rejected;
-    $('stat-escalated').textContent = sessionStats.escalated;
     $('stat-pending').textContent = sessionStats.pending;
     $('stat-time-saved').textContent = formatTimeSaved();
-  }
+}
 
   function formatTimeSaved() {
     const entries = Object.values(sessionHistory);
@@ -269,7 +276,9 @@
     }
 
     $('file-name').textContent = file.name;
-    $('file-size').textContent = 'Uploading and chunking…';
+    $('file-size').textContent = 'Processing your specification…';
+    $('uploaded').classList.add('active');
+    dz.style.display = 'none';
 
     const fd = new FormData();
     fd.append('file', file);
@@ -317,7 +326,11 @@
 
       const makeChunk = (c, i) => {
         const det = document.createElement('details'); det.className = `chunk ${key}`; det.open = i === 0;
-        det.innerHTML = `<summary><span class="chunk-ref ${key}">[${key.toUpperCase()}-${i + 1}]</span><span class="chunk-src">${escapeHtml(c.src)}</span><span class="chunk-meta"><span class="lang-badge ${(c.lang||'EN').toLowerCase()}">${escapeHtml(c.lang||'EN')}</span><svg class="chevron"><use href="#i-chevron-right"/></svg></span></summary><p class="chunk-text">${escapeHtml(c.text||'')}</p>`;
+        det.innerHTML = `<summary><span class="chunk-ref ${key}">[${key.toUpperCase()}-${i + 1}]</span><span class="chunk-src">${escapeHtml(c.src)}</span><span class="chunk-meta"><span class="lang-badge ${(c.lang||'EN').toLowerCase()}">${escapeHtml(c.lang||'EN')}</span><svg class="chevron"><use href="#i-chevron-right"/></svg></span></summary><p class="chunk-text">${escapeHtml(truncateClean(c.text||'', 300))}</p><button class="btn-view-full">View full text ↗</button>`;
+        det.querySelector('.btn-view-full').addEventListener('click', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          openChunkModal(c.src, c.text || '', (c.lang||'EN').toLowerCase());
+        });
         return det;
       };
 
@@ -375,7 +388,7 @@
   }
 
   $('approve-btn').addEventListener('click', () => decide('APPROVED'));
-  $('reject-btn').addEventListener('click', () => decide(lastVerdict?.allow_draft ? 'REJECTED' : 'ESCALATED'));
+  $('reject-btn').addEventListener('click', () => decide('REJECTED'));
   $('download-record-btn').addEventListener('click', downloadComplianceRecord);
   $('new-analysis-btn').addEventListener('click', resetForNewAnalysis);
   $('hm-edit-btn').addEventListener('click', editHistoryQuery);
@@ -392,11 +405,9 @@
       const previousReview = sessionHistory[lastQuery]?._review || null;
       if (previousReview?.decision === 'APPROVED' && sessionStats.approved > 0) sessionStats.approved -= 1;
       if (previousReview?.decision === 'REJECTED' && sessionStats.rejected > 0) sessionStats.rejected -= 1;
-      if (previousReview?.decision === 'ESCALATED' && sessionStats.escalated > 0) sessionStats.escalated -= 1;
       if (!previousReview && sessionStats.pending > 0) sessionStats.pending -= 1;
       if (finalDecision === 'APPROVED') sessionStats.approved += 1;
       if (finalDecision === 'REJECTED') sessionStats.rejected += 1;
-      if (finalDecision === 'ESCALATED') sessionStats.escalated += 1;
 
       if (sessionHistory[lastQuery]) { sessionHistory[lastQuery]._review = { decision: finalDecision, explanation: $('review-explanation').value, action: $('review-action').value, notes }; lastVerdict._review = sessionHistory[lastQuery]._review; }
       editingHistoryQuery = null; $('approve-btn').disabled = true; $('reject-btn').disabled = true;
@@ -501,7 +512,11 @@
   function downloadComplianceRecord() { if (!latestRecordUrl) { toast('No compliance record generated yet.', 'error'); return; } const a = document.createElement('a'); a.href = latestRecordUrl; a.download = latestRecordName; document.body.appendChild(a); a.click(); a.remove(); }
 
   function resetForNewAnalysis() {
-    lastVerdict = null; lastQuery = ''; editingHistoryQuery = null;
+      if (sessionId) {
+        fetch(`${API_BASE}/upload-spec/${sessionId}`, { method: 'DELETE' }).catch(() => {});
+        sessionId = '';
+      }
+      lastVerdict = null; lastQuery = ''; editingHistoryQuery = null;
     if (latestRecordUrl) URL.revokeObjectURL(latestRecordUrl);
     latestRecordUrl = null; latestRecordName = ''; qInput.value = ''; aBtn.disabled = true; fi.value = '';
     $('uploaded').classList.remove('active'); dz.style.display = 'flex'; $('results').classList.remove('active'); $('results-empty').style.display = 'block'; $('results-loading').classList.remove('active'); $('record-export').classList.remove('active');
@@ -523,11 +538,25 @@
   }
 
   function formatNumberedPlain(text) { return getNumberedItems(text).map((item, i) => `${i + 1}. ${item}`).join('\n\n'); }
-  function formatNumberedHtml(text) { return getNumberedItems(text).map((item, i) => `<p><strong>${i + 1}.</strong> ${escapeHtml(item)}</p>`).join(''); }
+  function formatNumberedHtml(text) { return getNumberedItems(text).map((item, i) => { const stripped = item.replace(/\*\*(.*?)\*\*/g, '$1'); return `<p><strong>${i + 1}.</strong> ${escapeHtml(stripped)}</p>`; }).join(''); }
   function fitTextareaToContent(el) { el.style.height = '0px'; el.style.height = `${el.scrollHeight}px`; }
   function fitModelTextareas() { ['review-explanation','review-action','review-notes'].forEach(id => fitTextareaToContent($(id))); }
   ['review-explanation','review-action','review-notes'].forEach(id => $(id).addEventListener('input', e => fitTextareaToContent(e.target)));
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function truncateClean(text, max) {
+    if (text.length <= max) return text;
+    const cut = text.slice(0, max);
+    const lastDot = cut.lastIndexOf('.');
+    const lastSpace = cut.lastIndexOf(' ');
+    const end = lastDot > max - 80 ? lastDot + 1 : lastSpace > max - 40 ? lastSpace : max;
+    return text.slice(0, end) + '…';
+  }
+  function openChunkModal(src, text, lang) {
+    document.getElementById('chunk-modal-src').textContent = src;
+    document.getElementById('chunk-modal-text').textContent = text.replace(/\n+/g, ' ').trim();
+    document.getElementById('chunk-modal-lang').textContent = lang === 'fr' ? '🇫🇷 French source' : '🇬🇧 English source';
+    document.getElementById('chunk-modal').style.display = 'block';
+  }
 
   $('audit-search').addEventListener('input', function() {
     const term = this.value.toLowerCase();

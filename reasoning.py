@@ -10,9 +10,8 @@ Updated architecture:
     uploaded spec document, not hardcoded assumptions.
   - reason() accepts an optional `spec_context` string for session spec content.
 
-Primary LLM: Google Gemini 2.0 Flash (free tier).
-  Get a free API key at: aistudio.google.com
-  Set environment variable: GEMINI_API_KEY=your_key_here
+Primary LLM: Claude claude-sonnet-4-5 (Anthropic).
+  Set environment variable: ANTHROPIC_API_KEY=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
 
 Fallback: mock mode for demos without internet or API key.
 
@@ -190,52 +189,41 @@ CITATIONS: TSI Art. 4.2.3.1, Arrêté 2012 Art. 49, NF F31-054 Sec. 6.3, EN 1475
 """
 
 
-# ── Gemini API call ───────────────────────────────────────────────────────────
+# ── Claude API call ───────────────────────────────────────────────────────────
 
-def _call_gemini(context: str, query: str) -> str:
+def _call_claude(context: str, query: str) -> str:
     """
-    Call Google Gemini 2.0 Flash via the free REST API.
-    Requires GEMINI_API_KEY environment variable.
+    Call Claude via the Anthropic REST API.
+    Requires ANTHROPIC_API_KEY environment variable.
     """
     import requests
 
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    if not api_key:
-        raise ValueError(
-            "GEMINI_API_KEY not set. "
-            "Get a free key at aistudio.google.com and run: "
-            "export GEMINI_API_KEY=your_key_here"
-        )
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "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")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={api_key}"
-
+    url = "https://api.anthropic.com/v1/messages"
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
     payload = {
-        "system_instruction": {
-            "parts": [{"text": SYSTEM_PROMPT}]
-        },
-        "contents": [
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 2000,
+        "system": SYSTEM_PROMPT,
+        "messages": [
             {
-                "parts": [
-                    {
-                        "text": (
-                            f"RETRIEVED CONTEXT:\n{context}\n\n"
-                            f"COMPLIANCE QUERY:\n{query}"
-                        )
-                    }
-                ]
+                "role": "user",
+                "content": (
+                    f"RETRIEVED CONTEXT:\n{context}\n\n"
+                    f"COMPLIANCE QUERY:\n{query}"
+                )
             }
         ],
-        "generationConfig": {
-            "temperature": 0.1,
-            "maxOutputTokens": 1200,
-        }
     }
-
-    response = requests.post(url, json=payload, timeout=60)
+    response = requests.post(url, headers=headers, json=payload, timeout=60)
     response.raise_for_status()
     data = response.json()
-    return data["candidates"][0]["content"]["parts"][0]["text"].strip()
-
+    return data["content"][0]["text"].strip()
 
 # ── Public interface ──────────────────────────────────────────────────────────
 
@@ -284,13 +272,13 @@ def reason(
         raw = _MOCK_RESPONSE
     else:
         try:
-            raw = _call_gemini(context, query)
+            raw = _call_claude(context, query)
         except Exception as e:
             raw = (
                 f"VERDICT: INSUFFICIENT DATA\n\n"
                 f"EXPLANATION:\nAPI call failed: {e}. Retrieved context is available "
                 f"below for manual review.\n\n"
-                f"RECOMMENDED ACTION:\nCheck GEMINI_API_KEY is set correctly and retry. "
+                f"RECOMMENDED ACTION:\nCheck ANTHROPIC_API_KEY is set correctly and retry. "
                 f"Run with --mock flag for demo without API.\n\n"
                 f"CONFIDENCE: RED — 0% — API unavailable\n\n"
                 f"CITATIONS: N/A"
