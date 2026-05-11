@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Live Demo - TrackMind</title>
-<meta name="description" content="Try TrackMind AI: upload a technical spec, ask in any language, get a cited compliance verdict." />
+<meta name="description" content="Try TrackMind: upload a technical spec, ask in any language, get a cited compliance verdict." />
 <link rel="icon" type="image/png" href="logo_images/trackmind_favicon.png">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -30,8 +30,12 @@
 <header class="nav">
   <div class="nav-inner">
     <a href="index.html" class="brand"><img src="logo_images/trackmind_logo2.png" class="brand-logo" alt="TrackMind logo"></a>
-    <nav class="nav-links"><a href="index.html#problem">Problem</a><a href="index.html#solution">Solution</a><a href="index.html#impact">Impact</a><a href="index.html#moat">Why Us</a></nav>
-    <div class="nav-mode"><button id="btn-live" class="nav-status status-live" onclick="setMode('live')"><span class="status-dot"></span> Live API</button><button id="btn-mock" class="nav-status status-mock inactive mode-tip" onclick="setMode('mock')" data-tip="Mock Mode uses canned LLM responses while keeping the same retrieval flow." style="display:none"><span class="status-dot"></span> Mock Mode</button></div>
+    <nav class="nav-links">
+      <a href="index.html#problem">Problem</a>
+      <a href="index.html#solution">Solution</a>
+      <a href="index.html#impact">Impact</a>
+      <a href="index.html#moat">Why Us</a>
+    </nav>
   </div>
 </header>
 
@@ -47,7 +51,7 @@
       <div class="step-head"><div class="step-num" id="step1-num">1</div><div><h2 class="step-title">Upload your technical specification</h2><p class="step-desc">PDF, up to 50 MB. Stays on your environment.</p></div></div>
       <div class="dropzone" id="dropzone"><svg><use href="#i-upload"/></svg><p><strong>Drag &amp; drop</strong> your PDF here, or <strong style="color:var(--accent)">browse</strong></p><p class="dz-hint">PDF only · max 50 MB</p><input type="file" id="file-input" accept="application/pdf" class="hidden"/></div>
       <div class="uploaded" id="uploaded"><div class="check"><svg><use href="#i-check"/></svg></div><div class="flex-min"><div class="file-name" id="file-name"></div><div class="file-size" id="file-size"></div></div><button class="remove" id="file-remove" title="Remove"><svg><use href="#i-x"/></svg></button></div>
-      <div class="preloaded"><p class="preloaded-lab">Pre-loaded knowledge base</p><div class="pill-row"><span class="pill"><svg class="lock"><use href="#i-lock"/></svg> EU TSI Regulations · pre-loaded</span><span class="pill"><svg class="lock"><use href="#i-lock"/></svg> French RFN Rules · pre-loaded</span></div></div>
+      <div class="preloaded"><p class="preloaded-lab">Pre-loaded knowledge base</p><div class="pill-row"><span class="pill"><svg class="lock"><use href="#i-lock"/></svg> EU TSI Regulations</span><span class="pill"><svg class="lock"><use href="#i-lock"/></svg> French RFN Rules</span></div></div>
     </section>
 
     <section class="step" id="step-2">
@@ -60,7 +64,7 @@
     </section>
 
     <section class="step" id="step-3">
-      <div class="step-head results-step-head"><div class="step-num" id="step3-num">3</div><div class="step-copy"><h2 class="step-title">Results</h2><p class="step-desc">Document context · Verdict · Assessor review.</p></div><div class="results-head-actions"><span id="analysis-time-slot"></span></div></div>
+      <div class="step-head results-step-head"><div class="step-num" id="step3-num">3</div><div class="step-copy"><h2 class="step-title">Results</h2><p class="step-desc">Document context · Verdict · Engineer review.</p></div><div class="results-head-actions"><span id="analysis-time-slot"></span></div></div>
       <div class="results-loading" id="results-loading"><div class="spinner"></div><span id="loading-msg">Retrieving across TSI, French RFN rules and your spec doc…</span></div>
       <div class="empty-state" id="results-empty"><svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Run an analysis to see the results.</div>
 
@@ -97,10 +101,10 @@
           </div>
 
           <div class="panel assessor-panel">
-            <div class="panel-head"><svg><use href="#i-shield"/></svg><h3 class="panel-title">Assessor review</h3></div>
+            <div class="panel-head"><svg><use href="#i-shield"/></svg><h3 class="panel-title">Engineer review</h3></div>
             <div class="field-block"><p class="field-lab">Edit explanation</p><textarea id="review-explanation" class="review-textarea fit-content"></textarea></div>
             <div class="field-block"><p class="field-lab">Edit recommended action</p><textarea id="review-action" class="review-textarea fit-content"></textarea></div>
-            <div class="field-block"><p class="field-lab">Assessor notes (optional)</p><textarea id="review-notes" class="review-textarea compact fit-content" placeholder="E.g. Verified against NF F31-054 source document."></textarea></div>
+            <div class="field-block"><p class="field-lab">Engineer notes (optional)</p><textarea id="review-notes" class="review-textarea compact fit-content" placeholder="E.g. Verified against NF F31-054 source document."></textarea></div>
             <div class="review-actions"><button class="btn btn-accent" id="approve-btn"><svg><use href="#i-thumbs-up"/></svg> Approve</button><button class="btn btn-danger" id="reject-btn"><svg><use href="#i-thumbs-down"/></svg> Reject</button></div>
             <div class="record-export" id="record-export"><span id="record-export-msg">Audit record generated.</span><div class="record-actions"><button class="btn btn-outline btn-sm" id="download-record-btn">Download audit PDF</button><button class="btn btn-primary btn-sm" id="new-analysis-btn">New analysis</button></div></div>
           </div>
@@ -129,7 +133,7 @@
       <a href="index.html" class="brand"><img src="logo_images/trackmind_logo2.png" alt="TrackMind logo" class="footer-logo"></a>
       <div class="footer-links"><a href="index.html#problem">Challenge</a><a href="index.html#solution">How it works</a><a href="index.html#impact">Impact</a><a href="index.html#moat">Why TrackMind</a><a href="demo.html">Demo</a></div>
     </div>
-    <div class="footer-meta"><p>© 2026 TrackMind · AI-powered compliance intelligence for European railway certification.</p><p>AI drafts only. Final compliance positions require assessor approval.</p></div>
+    <div class="footer-meta"><p>© 2026 TrackMind · AI-powered compliance intelligence for European railway certification.</p><p>AI drafts only. Final compliance positions require human approval.</p></div>
   </div>
 </footer>
 
@@ -150,7 +154,7 @@
     <div class="modal-badges"><span id="hm-verdict" class="verdict-pill"></span><span id="hm-conf" class="conf-pill" style="gap:6px;"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;opacity:.7;">Confidence</span><span id="hm-conf-pct"></span></span><span id="hm-decision" style="display:inline-flex;align-items:center;padding:5px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.08em;border:1px solid currentColor;"></span></div>
     <p class="field-lab">Explanation</p><div id="hm-explanation" class="field-text numbered" style="margin-bottom:16px;"></div>
     <p class="field-lab">Recommended action</p><div id="hm-action" class="field-text numbered" style="margin-bottom:16px;"></div>
-    <div id="hm-notes-block" class="modal-notes"><p class="field-lab">Assessor notes</p><div id="hm-notes" class="field-text" style="margin-bottom:16px;"></div></div>
+    <div id="hm-notes-block" class="modal-notes"><p class="field-lab">Engineer notes</p><div id="hm-notes" class="field-text" style="margin-bottom:16px;"></div></div>
     <p class="field-lab">Citations</p><div id="hm-citations" class="modal-citations"></div>
     <div class="modal-actions"><button class="btn btn-primary btn-sm" id="hm-edit-btn">Edit</button></div>
   </div>
@@ -179,7 +183,7 @@
 
   function applyMode(mode) { const selectedMode = mode === 'mock' ? 'mock' : 'live'; MOCK_MODE = selectedMode === 'mock'; setStatus(selectedMode); }
   function setMode(mode) { const selectedMode = mode === 'mock' ? 'mock' : 'live', currentMode = MOCK_MODE ? 'mock' : 'live'; if (selectedMode === currentMode) return; localStorage.setItem('trackmind_mode', selectedMode); window.location.reload(); }
-  function initMode() { applyMode(localStorage.getItem('trackmind_mode') === 'mock' ? 'mock' : 'live'); }
+  function initMode() { applyMode('live'); }
 
   async function checkBackend() {
     try { const r = await fetch(`${API_BASE}/health`); if (!r.ok) throw new Error(`HTTP ${r.status}`); const health = await r.json(); API_AVAILABLE = true; setStatus(MOCK_MODE ? 'mock' : 'live'); return health; }
@@ -288,11 +292,11 @@
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || 'Upload failed'); }
       const data = await res.json();
       sessionId = data.session_id;
-      $('file-size').textContent = `${data.chunk_count} chunks · session memory only — not stored in DB`;
+      $('file-size').textContent = `Loaded successfully`;
       $('uploaded').classList.add('active');
       dz.style.display = 'none';
       $('step1-num').classList.add('done');
-      toast(`Spec loaded — ${data.chunk_count} chunks`, 'success');
+      toast(`Spec loaded - ${data.chunk_count} chunks`, 'success');
     } catch (e) {
       $('file-size').textContent = '';
       toast('Upload failed: ' + e.message, 'error');
@@ -414,7 +418,7 @@
       loadAuditStats(); loadAuditLog(); await generateComplianceRecord(finalDecision, ids);
 
       const label = finalDecision === 'APPROVED' ? 'Verdict approved & logged' : finalDecision === 'REJECTED' ? 'Verdict rejected & logged' : 'Escalation logged';
-      toast(ids?.response_id ? `${label} · response_id=${ids.response_id}` : label, ['REJECTED','ESCALATED'].includes(finalDecision) ? 'error' : 'success');
+      toast(label, ['REJECTED','ESCALATED'].includes(finalDecision) ? 'error' : 'success');
     } catch (e) { toast(e.message || 'Could not log decision.', 'error'); }
   }
 
@@ -427,13 +431,13 @@
     let y = 0; doc.setLineHeightFactor(1.42);
 
     const C = { navy:[14,37,71], tsi:[63,127,189], green:[76,175,59], red:[192,57,43], amber:[217,119,6], escalated: [185, 28, 28],text:[26,26,46], muted:[107,114,128], rule:[229,231,235], soft:[249,250,251], white:[255,255,255], navylt:[148,175,201] };
-    const clean = v => String(v || '').replace(/[""]/g, '"').replace(/['']/g, "'").replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/[–—]/g, '-').replace(/·/g, '-').replace(/\u00a0/g, ' ').trim();
+    const clean = v => String(v || '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/[""]/g, '"').replace(/['']/g, "'").replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/[–—]/g, '-').replace(/·/g, '-').replace(/\u00a0/g, ' ').trim();
     const st = (size, style, color) => { doc.setFont('helvetica', style || 'normal'); doc.setFontSize(size); doc.setTextColor(...(color || C.text)); };
     const loadPdfImage = src => new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = src; });
 
     function ensure(need) { if (y + need > pageH - FOOTER_H - 10) { drawFooter(); doc.addPage(); y = 0; drawContHeader(); } }
-    function drawFooter() { doc.setDrawColor(...C.rule); doc.setLineWidth(0.5); doc.line(M, pageH - FOOTER_H, M + CW, pageH - FOOTER_H); st(7, 'normal', C.muted); doc.text('TrackMind AI prototype - AI draft only. Final compliance positions require assessor approval.', M, pageH - FOOTER_H + 12); }
-    function drawContHeader() { st(7.5, 'bold', C.navy); doc.text('TrackMind AI · Audit Record (continued)', M, 14); doc.setDrawColor(...C.rule); doc.setLineWidth(0.4); doc.line(M, 18, M + CW, 18); y = 26; }
+    function drawFooter() { doc.setDrawColor(...C.rule); doc.setLineWidth(0.5); doc.line(M, pageH - FOOTER_H, M + CW, pageH - FOOTER_H); st(7, 'normal', C.muted); doc.text('TrackMind prototype - AI draft only. Final compliance positions require human approval.', M, pageH - FOOTER_H + 12); }
+    function drawContHeader() { st(7.5, 'bold', C.navy); doc.text('TrackMind · Audit Record (continued)', M, 24); doc.setDrawColor(...C.rule); doc.setLineWidth(0.4); doc.line(M, 32, M + CW, 32); y = 50; }
     function hrule(color, lw) { doc.setDrawColor(...(color || C.rule)); doc.setLineWidth(lw || 0.5); doc.line(M, y, M + CW, y); }
     function thinRule() { y += 1; hrule(C.rule, 0.3); y += 1; }
     function drawSectionLabel(lbl) { ensure(30); doc.setFillColor(...C.navy); doc.roundedRect(M, y, CW, 21, 3, 3, 'F'); st(9, 'bold', C.white); doc.text(lbl.toUpperCase(), SECTION_X, y + 13.5); y += 34; }
@@ -445,12 +449,18 @@
     const bannerH = 75, logoImg = await loadPdfImage('logo_images/trackmind_logo_white.png'), logoH = 20, logoY = 16, logoW = logoImg ? logoH * (logoImg.naturalWidth / logoImg.naturalHeight) : 0, titleX = logoImg ? M + logoW + 8 : M;
     doc.setFillColor(...C.navy); doc.rect(0, 0, pageW, bannerH, 'F');
     if (logoImg) doc.addImage(logoImg, 'PNG', M, logoY, logoW, logoH);
-    st(20, 'bold', C.white); const twW = doc.getTextWidth('TrackMind'); doc.text('TrackMind', titleX, 34); st(20, 'bold', C.green); doc.text(' AI', titleX + twW, 34);
+    st(20, 'bold', C.white); doc.text('TrackMind', titleX, 34);
     st(8, 'normal', C.navylt); doc.text('Human-reviewed railway compliance audit record', M, 52); y = bannerH + 22;
 
     const third = CW / 3, reviewColor = safeDecision === 'REJECTED' ? C.red : safeDecision === 'ESCALATED' ? C.escalated : C.green, cellPad = 8;
     function drawSummaryLabel(label, x, rowY) { st(8, 'bold', C.text); doc.text(label.toUpperCase(), x, rowY); }
     function drawSummaryText(value, x, rowY) { st(9, 'normal', C.text); doc.text(clean(value), x, rowY + 13); }
+    function truncatePdfText(value, maxWidth) {
+      let text = clean(value);
+      if (doc.getTextWidth(text) <= maxWidth) return text;
+      while (text.length > 3 && doc.getTextWidth(`${text}...`) > maxWidth) text = text.slice(0, -1);
+      return `${text}...`;
+    }
     function drawSummaryPill(value, color, x, rowY, filled) {
       const txt = clean(value), pillY = rowY + 17; st(9, 'bold', filled ? C.white : color); const pillW = doc.getTextWidth(txt) + 18;
       doc.setDrawColor(...color); doc.setFillColor(...(filled ? color : C.white)); doc.setLineWidth(0.8); doc.roundedRect(x, pillY - 11, pillW, 16, 6, 6, filled ? 'F' : 'FD');
@@ -458,45 +468,58 @@
     }
     const row1Y = y, row2Y = y + 43;
 
-    const verdict = lastVerdict.verdict || '-', confPct = lastVerdict.confidence_pct || '-', confTier = (lastVerdict.confidence_tier || '').toUpperCase(), confidence = `${confPct}% — ${confTier}`;
+    const verdict = lastVerdict.verdict || '-', confPct = lastVerdict.confidence_pct || '-', confTier = (lastVerdict.confidence_tier || '').toUpperCase(), confidence = `${confPct}%`, specName = $('file-name').textContent || '-';
     const verdictColor = verdict === 'CONFLICT DETECTED' ? C.red : verdict === 'COMPLIANT' ? C.green : C.muted, confColor = confTier === 'GREEN' ? C.green : confTier === 'RED' ? C.red : C.amber;
     st(9, 'bold', confColor); const confidencePillW = doc.getTextWidth(clean(confidence)) + 18;
-    st(8, 'bold', C.text); const colX = [M + cellPad, M + third + (third - confidencePillW) / 2, M + CW - cellPad - doc.getTextWidth('REVIEW OUTCOME')];
+    st(8, 'bold', C.text); const colX = [M + cellPad, M + third + (third - confidencePillW) / 2, M + CW - cellPad - doc.getTextWidth('REVIEW OUTCOME')], summaryColW = M + CW - colX[2];
 
-    drawSummaryLabel('Generated at', colX[0], row1Y); drawSummaryLabel('Assessor ID', colX[1], row1Y); drawSummaryLabel('Response ID', colX[2], row1Y);
-    drawSummaryText(now.toLocaleString(), colX[0], row1Y); drawSummaryText(assessorId, colX[1], row1Y); drawSummaryText(ids?.response_id || '-', colX[2], row1Y);
+    drawSummaryLabel('Generated at', colX[0], row1Y); drawSummaryLabel('Assessor ID', colX[1], row1Y); drawSummaryLabel('Specification', colX[2], row1Y);
+    drawSummaryText(now.toLocaleString(), colX[0], row1Y); drawSummaryText(assessorId, colX[1], row1Y); drawSummaryText(truncatePdfText(specName, summaryColW), colX[2], row1Y);
 
-    drawSummaryLabel('Verdict', colX[0], row2Y); drawSummaryLabel('Confidence level', colX[1], row2Y); drawSummaryLabel('Review outcome', colX[2], row2Y);
+    drawSummaryLabel('Verdict', colX[0], row2Y); drawSummaryLabel('AI Confidence level', colX[1], row2Y); drawSummaryLabel('Review outcome', colX[2], row2Y);
     drawSummaryPill(verdict, verdictColor, colX[0], row2Y, false); drawSummaryPill(confidence, confColor, colX[1], row2Y, false); drawSummaryPill(safeDecision, reviewColor, colX[2], row2Y, true);
     y = row2Y + 44; thinRule();
 
     sectionLabelText('Compliance query', lastQuery); thinRule();
     sectionNumberedList('Final explanation', parseNumbered(clean($('review-explanation').value || lastVerdict.explanation || '-'))); thinRule();
     sectionNumberedList('Final recommended action', parseNumbered($('review-action').value)); thinRule();
-    sectionLabelText('Assessor notes', $('review-notes').value || 'No assessor notes provided.'); thinRule();
+    sectionLabelText('Engineer notes', $('review-notes').value || 'No engineer notes provided.'); thinRule();
 
     const citConfig = [{ key: 'TSI', label: 'EU TSI Regulations', color: C.tsi }, { key: 'NNTR', label: 'French RFN Rules', color: [146,64,14] }, { key: 'SPEC', label: 'Your Specifications', color: [22,101,52] }];
     const grouped = { TSI: [], NNTR: [], SPEC: [] }; (lastVerdict.citations || []).forEach(c => grouped[classifyCit(c)].push(clean(c)));
     const citGroups = citConfig.filter(g => grouped[g.key].length).map(g => ({ ...g, chips: grouped[g.key] }));
 
     if (citGroups.length) {
-      ensure(32); drawSectionLabel('Citations');
-      const chipH = 14, chipGap = 5, labelColW = 104;
-      citGroups.forEach(grp => {
+      const baseChipH = 14, chipGap = 5, labelColW = 104, firstCitationLineH = baseChipH + 14;
+      ensure(34 + firstCitationLineH); drawSectionLabel('Citations');
+      citGroups.forEach((grp, grpIdx) => {
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
-        let rowW = 0, rows = 1;
-        grp.chips.forEach(chip => { const cw = doc.getTextWidth(`[${grp.key}] ${chip}`) + 14; if (rowW + cw + chipGap > CW - labelColW && rowW > 0) { rows++; rowW = 0; } rowW += cw + chipGap; });
-        const rowH = rows * (chipH + 4) + 14; ensure(rowH + 6);
-        st(8, 'bold', grp.color); doc.text(`${grp.label}:`, SECTION_X, y + 9);
-
-        let cx = M + labelColW, cy = y;
+        if (grpIdx > 0) ensure(firstCitationLineH + 6);
+        const rows = [[]];
+        let rowW = 0;
         grp.chips.forEach(chip => {
-          const chipText = `[${grp.key}] ${chip}`, cw = doc.getTextWidth(chipText) + 14;
-          if (cx + cw > M + CW) { cx = M + labelColW; cy += chipH + 4; }
-          doc.setFillColor(...C.soft); doc.setDrawColor(...C.rule); doc.setLineWidth(0.5); doc.roundedRect(cx, cy, cw, chipH, 4, 4, 'FD');
-          st(8, 'normal', grp.color); doc.text(chipText, cx + 7, cy + 9); cx += cw + chipGap;
+          const chipText = `[${grp.key}] ${chip}`;
+          const chipW = Math.min(doc.getTextWidth(chipText) + 14, CW - labelColW);
+          const chipLines = doc.splitTextToSize(chipText, chipW - 14);
+          const chipH = Math.max(baseChipH, chipLines.length * 10 + 6);
+          if (rowW && rowW + chipW + chipGap > CW - labelColW) { rows.push([]); rowW = 0; }
+          rows[rows.length - 1].push({ lines: chipLines, width: chipW, height: chipH });
+          rowW += chipW + chipGap;
         });
-        y += rowH - 8;
+
+        rows.forEach((row, rowIdx) => {
+          const rowH = Math.max(...row.map(chip => chip.height), baseChipH);
+          ensure(rowH + 6);
+          if (rowIdx === 0) { st(8, 'bold', grp.color); doc.text(`${grp.label}:`, SECTION_X, y + 9); }
+          let cx = M + labelColW;
+          row.forEach(chip => {
+            doc.setFillColor(...C.soft); doc.setDrawColor(...C.rule); doc.setLineWidth(0.5); doc.roundedRect(cx, y, chip.width, chip.height, 4, 4, 'FD');
+            st(8, 'normal', grp.color); doc.text(chip.lines, cx + 7, y + 9);
+            cx += chip.width + chipGap;
+          });
+          y += rowH + 4;
+        });
+        y += 2;
       });
     }
 
@@ -512,20 +535,16 @@
   function downloadComplianceRecord() { if (!latestRecordUrl) { toast('No compliance record generated yet.', 'error'); return; } const a = document.createElement('a'); a.href = latestRecordUrl; a.download = latestRecordName; document.body.appendChild(a); a.click(); a.remove(); }
 
   function resetForNewAnalysis() {
-      if (sessionId) {
-        fetch(`${API_BASE}/upload-spec/${sessionId}`, { method: 'DELETE' }).catch(() => {});
-        sessionId = '';
-      }
-      lastVerdict = null; lastQuery = ''; editingHistoryQuery = null;
+    lastVerdict = null; lastQuery = ''; editingHistoryQuery = null;
     if (latestRecordUrl) URL.revokeObjectURL(latestRecordUrl);
     latestRecordUrl = null; latestRecordName = ''; qInput.value = ''; aBtn.disabled = true; fi.value = '';
-    $('uploaded').classList.remove('active'); dz.style.display = 'flex'; $('results').classList.remove('active'); $('results-empty').style.display = 'block'; $('results-loading').classList.remove('active'); $('record-export').classList.remove('active');
+    $('results').classList.remove('active'); $('results-empty').style.display = 'block'; $('results-loading').classList.remove('active'); $('record-export').classList.remove('active');
     $('new-analysis-btn').style.display = 'none';
     document.querySelectorAll('.analysis-time').forEach(el => el.remove());
-    ['step1-num','step2-num','step3-num'].forEach(id => $(id).classList.remove('done'));
+    ['step2-num','step3-num'].forEach(id => $(id).classList.remove('done'));
     ['review-explanation','review-action','review-notes'].forEach(id => $(id).value = '');
     ['tsi','nntr','spec'].forEach(key => { $('chunks-' + key + '-inner').innerHTML = ''; $(`citations-${key}`).innerHTML = ''; $(`citations-${key}-group`).style.display = 'none'; });
-    $('citations-block').style.display = 'none'; $('step-1').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('citations-block').style.display = 'none'; $('step-2').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   let toastTimer;
@@ -537,7 +556,7 @@
     return matches.length ? matches.map(match => match[1].trim()).filter(Boolean) : value.split(/\n{2,}/).map(item => item.trim()).filter(Boolean);
   }
 
-  function formatNumberedPlain(text) { return getNumberedItems(text).map((item, i) => `${i + 1}. ${item}`).join('\n\n'); }
+  function formatNumberedPlain(text) { return getNumberedItems(text).map((item, i) => `${i + 1}. ${item.replace(/\*\*(.*?)\*\*/g, '$1')}`).join('\n\n'); }
   function formatNumberedHtml(text) { return getNumberedItems(text).map((item, i) => { const stripped = item.replace(/\*\*(.*?)\*\*/g, '$1'); return `<p><strong>${i + 1}.</strong> ${escapeHtml(stripped)}</p>`; }).join(''); }
   function fitTextareaToContent(el) { el.style.height = '0px'; el.style.height = `${el.scrollHeight}px`; }
   function fitModelTextareas() { ['review-explanation','review-action','review-notes'].forEach(id => fitTextareaToContent($(id))); }
@@ -580,7 +599,7 @@
       decisionEl.style.color = review.decision === 'APPROVED' ? '#166534' : review.decision === 'ESCALATED' ? '#7f1d1d' : '#991b1b';
       decisionEl.style.background = review.decision === 'APPROVED' ? 'rgba(76,175,59,.1)' : review.decision === 'ESCALATED' ? 'var(--escalated-soft)' : 'rgba(224,71,62,.08)';
       decisionEl.style.borderColor = review.decision === 'APPROVED' ? 'rgba(76,175,59,.3)' : review.decision === 'ESCALATED' ? 'var(--escalated-border)' : 'rgba(224,71,62,.3)';
-      $('hm-explanation').innerHTML = formatNumberedHtml(review.explanation); $('hm-action').innerHTML = formatNumberedHtml(review.action); $('hm-notes-block').style.display = 'block'; $('hm-notes').textContent = review.notes || 'No assessor notes provided.';
+      $('hm-explanation').innerHTML = formatNumberedHtml(review.explanation); $('hm-action').innerHTML = formatNumberedHtml(review.action); $('hm-notes-block').style.display = 'block'; $('hm-notes').textContent = review.notes || 'No engineer notes provided.';
     } else {
       decisionEl.style.display = 'inline-flex'; decisionEl.textContent = 'PENDING'; decisionEl.style.color = '#92400e'; decisionEl.style.background = 'rgba(245,165,36,.14)'; decisionEl.style.borderColor = 'rgba(245,165,36,.34)';
       $('hm-explanation').innerHTML = formatNumberedHtml(d.explanation); $('hm-action').innerHTML = formatNumberedHtml(d.recommended_action); $('hm-notes-block').style.display = 'none'; $('hm-notes').textContent = '';
