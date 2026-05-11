@@ -198,7 +198,7 @@ def _call_claude(context: str, query: str) -> str:
     """
     import requests
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "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")
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
 
     url = "https://api.anthropic.com/v1/messages"
     headers = {

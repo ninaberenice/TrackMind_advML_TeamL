@@ -13,9 +13,14 @@ The spec PDF is never written to ChromaDB. It lives only in the server's
 in-memory session store (_SESSION_SPECS dict, keyed by session_id).
 This keeps manufacturer specs off the persistent vector DB.
 
-Run:
+Run (first time only):
     pip install fastapi uvicorn python-multipart
+
+Run:
+    export ANTHROPIC_API_KEY=<your-api-key>
     uvicorn api:app --reload --port 8000
+
+Open: http://localhost:8000
 """
 
 import os
