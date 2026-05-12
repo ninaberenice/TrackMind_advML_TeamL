@@ -1,7 +1,7 @@
 """
 api.py
 ======
-TrackMind — FastAPI backend.
+TrackMind AI — FastAPI backend.
 
 Updated architecture:
   - /upload-spec   NEW: accepts a spec PDF, chunks it in memory, stores in session cache
@@ -33,7 +33,7 @@ from pydantic import BaseModel
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="TrackMind", version="2.0.0")
+app = FastAPI(title="TrackMind AI", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
