@@ -2,8 +2,11 @@ anthropic
 pymupdf
 chromadb
 sentence-transformers
+torch>=2.4
+numpy<2
 fastapi
 uvicorn[standard]
 python-multipart
 requests
 pydantic
+ipywidgets
