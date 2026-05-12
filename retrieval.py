@@ -181,7 +181,7 @@ def _extract_source_refs(text: str, source_key: str) -> list[str]:
 
 def _boost_regulatory_chunks(source_key: str, combined_text: str, max_chunks: int) -> list[dict]:
     text = combined_text.lower()
-    articles = []
+    articles = _extract_source_refs(combined_text, source_key)
 
     if source_key == "tsi":
         door_signal = any(token in text for token in ("door", "doors", "obstacle", "14752", "passenger access"))
@@ -191,8 +191,6 @@ def _boost_regulatory_chunks(source_key: str, combined_text: str, max_chunks: in
         french_signal = any(token in text for token in ("arrêté", "arrete", "french", "rfn", "nf f31", "amec", "epsf", "door", "obstacle"))
         if french_signal:
             articles.append("Art. 49")
-
-    articles.extend(_extract_source_refs(combined_text, source_key))
 
     boosted = []
     for article in articles:

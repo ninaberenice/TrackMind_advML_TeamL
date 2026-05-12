@@ -41,10 +41,34 @@ def _retrieval_has_all_sources(retrieval: dict) -> bool:
     return all(bool(retrieval.get(key, {}).get("chunks")) for key in ("tsi", "nntr", "spec"))
 
 
+def _empty_retrieved_source(source: dict) -> dict:
+    return {**source, "results": None, "chunks": [], "empty": True}
+
+
+def _query_is_tsi_only_scope(query: str) -> bool:
+    text = (query or "").lower()
+    mentions_tsi = any(token in text for token in ("loc&pas", "loc pas", "tsi"))
+    mentions_french_scope = any(token in text for token in (
+        "french",
+        "france",
+        "rfn",
+        "nntr",
+        "arrêté",
+        "arrete",
+        "nf f31",
+        "f31-054",
+        "national rule",
+        "national rules",
+    ))
+    return mentions_tsi and not mentions_french_scope
+
+
 def _cap_confidence_for_indirect_regulatory_support(response: ComplianceResponse) -> None:
     if response.confidence_tier == "RED":
         return
     if _query_is_spec_negative_evidence_question(response.query):
+        return
+    if _query_is_tsi_only_scope(response.query):
         return
 
     if _context_has_all_sources(response) and (
@@ -88,6 +112,54 @@ def _cap_confidence_for_indirect_regulatory_support(response: ComplianceResponse
         )
 
 
+def _drop_tsi_scope_irrelevant_points(text: str) -> str:
+    parts = re.split(r"\n\s*\n", text or "")
+    kept = []
+    irrelevant_terms = (
+        "french",
+        "rfn",
+        "nntr",
+        "arrêté",
+        "arrete",
+        "nf f31",
+        "f31-054",
+        "national rule",
+        "national rules",
+    )
+    for part in parts:
+        lower = part.lower()
+        if any(term in lower for term in irrelevant_terms):
+            continue
+        kept.append(part.strip())
+
+    if not kept:
+        return text
+
+    renumbered = []
+    for idx, part in enumerate(kept, start=1):
+        renumbered.append(re.sub(r"^\s*\d+\.\s*", f"{idx}. ", part))
+    return "\n\n".join(renumbered)
+
+
+def _enforce_tsi_only_scope(response: ComplianceResponse, retrieval: dict) -> None:
+    if not _query_is_tsi_only_scope(response.query):
+        return
+
+    response.explanation = _drop_tsi_scope_irrelevant_points(response.explanation)
+    response.recommended_action = _drop_tsi_scope_irrelevant_points(response.recommended_action)
+
+    if (
+        response.verdict == "COMPLIANT"
+        and retrieval.get("tsi", {}).get("chunks")
+        and retrieval.get("spec", {}).get("chunks")
+    ):
+        response.confidence_tier = "GREEN"
+        response.confidence_pct = max(response.confidence_pct or 0, 91)
+        response.confidence_reason = (
+            "TSI and SPEC evidence are retrieved and aligned for the LOC&PAS TSI scope requested."
+        )
+
+
 def _query_asks_three_source_conflict(query: str) -> bool:
     text = (query or "").lower()
     asks_conflict = any(token in text for token in (
@@ -125,6 +197,14 @@ def _query_asks_if_spec_identifies_conflict(query: str) -> bool:
 def _query_asks_tsi_baseline_only_compliance(query: str) -> bool:
     text = (query or "").lower()
     mentions_tsi = any(token in text for token in ("loc&pas", "loc pas", "tsi"))
+    mentions_doors = any(token in text for token in (
+        "door",
+        "doors",
+        "passenger access",
+        "access door",
+        "obstacle detection",
+        "closing and locking",
+    ))
     asks_compliance = any(token in text for token in (
         "comply",
         "complies",
@@ -149,7 +229,7 @@ def _query_asks_tsi_baseline_only_compliance(query: str) -> bool:
         "f31-054",
         "section 6.3",
     ))
-    return mentions_tsi and asks_compliance and not mentions_french_scope
+    return mentions_tsi and mentions_doors and asks_compliance and not mentions_french_scope
 
 
 def _mentions_missing_direct_standard(text: str) -> bool:
@@ -664,6 +744,9 @@ def reason(
             "spec": empty_spec_source(),
         }
 
+    if _query_is_tsi_only_scope(query):
+        retrieval["nntr"] = _empty_retrieved_source(retrieval["nntr"])
+
     context = format_context_for_llm(retrieval)
 
     if mock:
@@ -687,6 +770,7 @@ def reason(
     _answer_spec_identifies_conflict_question(response, retrieval)
     _answer_spec_negative_evidence_question(response, retrieval)
     _downgrade_insufficient_when_spec_disproves_compliance(response, retrieval)
+    _enforce_tsi_only_scope(response, retrieval)
     verdict_retrieval = _align_retrieval_to_verdict(response, retrieval, session_spec_chunks)
     _remap_response_labels(response, verdict_retrieval)
     _ensure_visible_labels_have_chunks(response, verdict_retrieval, retrieval)

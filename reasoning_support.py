@@ -70,6 +70,9 @@ ASSESSMENT RULES (non-negotiable):
 - If SPEC cites a TSI or NNTR article, verify that article against the matching TSI/NNTR
   chunk. If the regulatory chunk does not support the SPEC's description, state that
   the SPEC regulatory reference appears inconsistent or unsupported.
+- If the user names a specific TSI/NNTR article or section and that exact
+  article/section appears in the retrieved context under a chunk label, treat it as
+  retrieved and cite that label. Do not say the article was not retrieved.
 - If you know a requirement from the guidance but the matching retrieved chunk is not
   present, do not cite it as evidence. Mark the answer INSUFFICIENT DATA or explain
   that the relevant source chunk was not retrieved.
@@ -83,6 +86,9 @@ ASSESSMENT RULES (non-negotiable):
   shows incomplete/missing/pending testing, answer from SPEC chunks only. Do not
   add generic TSI/NNTR anchors unless the question asks for regulatory compliance
   against those sources.
+- If the user asks only about LOC&PAS TSI / TSI requirements and does not mention
+  French RFN, NNTR, Arrêté, NF F31-054, or national rules, assess only the TSI scope.
+  Do not discuss French RFN enhancements or actions, even if the SPEC mentions them.
 - Cite the specific article/section number for EVERY factual claim
 - Compare the SPEC claims directly against TSI and NNTR requirements on each parameter
 - If the same parameter is covered by both TSI and NNTR with different requirements,
@@ -462,14 +468,15 @@ def _align_retrieval_to_verdict(
         if 0 <= pos < len(chunks):
             _append_labeled_unique(aligned[key]["chunks"], chunks[pos], f"[{label}]")
 
-    # Always honor explicit article references in the actual explanation/action,
-    # even if the model forgot to repeat them in the CITATIONS field.
+    # Honor article references explicitly requested by the user. Do not expand the
+    # evidence panel from incidental article mentions in the generated verdict:
+    # visible [TSI-1] / [SPEC-1] labels are the source of truth there.
     for key in ("tsi", "nntr"):
-        for article in _article_refs_from_citation(verdict_refs, key):
+        for article in _article_refs_from_citation(response.query, key):
             for chunk in retrieve_regulatory_article(key, article, n=2):
                 _append_unique(aligned[key]["chunks"], chunk)
 
-    for chunk in _session_spec_article_chunks(_article_refs_from_citation(verdict_refs, "spec"), session_spec_chunks):
+    for chunk in _session_spec_article_chunks(_article_refs_from_citation(response.query, "spec"), session_spec_chunks):
         _append_unique(aligned["spec"]["chunks"], chunk)
 
     for key in ("tsi", "nntr", "spec"):

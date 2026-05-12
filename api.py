@@ -25,6 +25,7 @@ Open: http://localhost:8000
 
 import os
 import uuid
+from types import SimpleNamespace
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -279,23 +280,23 @@ def analyse(req: AnalyseRequest):
 
 @app.post("/decide")
 def decide(req: DecisionRequest):
-    """Log an assessor decision (approve / reject / escalate)."""
+    """Log an assessor decision (approve / reject)."""
     try:
         log_full_interaction, _, _ = get_audit()
 
-        class _Resp:
-            pass
+        decision = "REJECTED" if req.decision == "ESCALATED" else req.decision
 
-        resp = _Resp()
-        resp.query              = req.query_text
-        resp.verdict            = req.verdict
-        resp.explanation        = req.edited_explanation or req.explanation
-        resp.recommended_action = req.edited_action or req.recommended_action
-        resp.confidence_tier    = req.confidence_tier
-        resp.confidence_pct     = req.confidence_pct
-        resp.confidence_reason  = req.confidence_reason
-        resp.citations          = req.citations
-        resp.raw_response       = req.raw_response
+        resp = SimpleNamespace(
+            query=req.query_text,
+            verdict=req.verdict,
+            explanation=req.edited_explanation or req.explanation,
+            recommended_action=req.edited_action or req.recommended_action,
+            confidence_tier=req.confidence_tier,
+            confidence_pct=req.confidence_pct,
+            confidence_reason=req.confidence_reason,
+            citations=req.citations,
+            raw_response=req.raw_response,
+        )
 
         edited = ""
         if req.edited_explanation or req.edited_action:
@@ -308,7 +309,7 @@ def decide(req: DecisionRequest):
             query_text=req.query_text,
             response=resp,
             assessor_id=req.assessor_id,
-            decision=req.decision,
+            decision=decision,
             notes=req.notes,
             edited_response=edited,
             tsi_top=req.tsi_top,
