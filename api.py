@@ -341,7 +341,7 @@ def audit_stats():
 
 @app.get("/")
 def root():
-    return FileResponse("demo.html")
+    return FileResponse("index.html")
 
 @app.get("/{filepath:path}")
 def static_file(filepath: str):
