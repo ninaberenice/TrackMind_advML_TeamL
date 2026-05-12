@@ -194,7 +194,15 @@
     const retrieval = raw.retrieval || {};
     const mapSource = (key, fallbackLang) => {
       const src = retrieval[key] || {}, lang = (src.lang || fallbackLang || 'EN').toUpperCase();
-      return (src.chunks || []).map((c, i) => ({ source: key, src: c.article || `${key.toUpperCase()}-${i + 1}`, lang, distance: typeof c.distance === 'number' ? c.distance : null, score: typeof c.distance === 'number' ? 1 - c.distance : null, text: c.text || '' }));
+      const refCounts = {};
+      (src.chunks || []).forEach(c => { const ref = c.article || ''; if (ref) refCounts[ref] = (refCounts[ref] || 0) + 1; });
+      const refSeen = {};
+      return (src.chunks || []).map((c, i) => {
+        const ref = c.article || `${key.toUpperCase()}-${i + 1}`;
+        refSeen[ref] = (refSeen[ref] || 0) + 1;
+        const displayRef = refCounts[ref] > 1 ? `${ref} #${refSeen[ref]}` : ref;
+        return { source: key, src: displayRef, article: ref, lang, distance: typeof c.distance === 'number' ? c.distance : null, score: typeof c.distance === 'number' ? 1 - c.distance : null, text: c.text || '' };
+      });
     };
     const confidencePct = Number.isFinite(Number(raw.confidence_pct)) ? Number(raw.confidence_pct) : 0, tier = (raw.confidence_tier || 'AMBER').toUpperCase();
     return { query, verdict: raw.verdict || 'INSUFFICIENT DATA', explanation: raw.explanation || '', recommended_action: raw.recommended_action || '', action: raw.recommended_action || '', confidence_tier: tier, tier: tier.toLowerCase(), confidence_pct: confidencePct, confidence: confidencePct / 100, confidence_reason: raw.confidence_reason || '', citations: Array.isArray(raw.citations) ? raw.citations : [], raw_response: raw.raw_response || '', allow_draft: typeof raw.allow_draft === 'boolean' ? raw.allow_draft : tier !== 'RED', gate_message: raw.gate_message || '', retrieval, chunksBySource: { tsi: mapSource('tsi', 'EN'), nntr: mapSource('nntr', 'FR'), spec: mapSource('spec', 'EN') }, tsi_top: raw.tsi_top || '', nntr_top: raw.nntr_top || '', spec_top: raw.spec_top || '', raw };
@@ -377,6 +385,9 @@
 
   function classifyCitation(citation) {
     const c = String(citation).toLowerCase();
+    if (/\[spec-\d+\]/i.test(citation)) return 'spec';
+    if (/\[nntr-\d+\]/i.test(citation)) return 'nntr';
+    if (/\[tsi-\d+\]/i.test(citation)) return 'tsi';
     if (c.includes('tsi') || c.includes('loc&pas') || c.includes('loc pas') || c.includes('1302/2014')) return 'tsi';
     if (c.includes('arrêté') || c.includes('arrete') || c.includes('article') || c.includes('nntr') || c.includes('national rule') || c.includes('french') || c.includes('rfn')) return 'nntr';
     if (c.includes('iberrail') || c.includes('ib-emu') || c.includes('spec') || c.includes('technical specification')) return 'spec';
@@ -388,7 +399,7 @@
     if (!items.length) { group.style.display = 'none'; return; }
     group.style.display = 'block';
     const citationPrefixes = { tsi: '[TSI]', nntr: '[NNTR]', spec: '[SPEC]' };
-    items.forEach(citation => { const chip = document.createElement('span'); chip.className = `citation-chip ${key}`; chip.textContent = `${citationPrefixes[key]} ${citation}`; container.appendChild(chip); });
+    items.forEach(citation => { const chip = document.createElement('span'); chip.className = `citation-chip ${key}`; chip.textContent = `${citationPrefixes[key]} ${String(citation).replace(/^\[(TSI|NNTR|SPEC)\]\s*/i, '')}`; container.appendChild(chip); });
   }
 
   $('approve-btn').addEventListener('click', () => decide('APPROVED'));
@@ -556,7 +567,7 @@
     return matches.length ? matches.map(match => match[1].trim()).filter(Boolean) : value.split(/\n{2,}/).map(item => item.trim()).filter(Boolean);
   }
 
-  function formatNumberedPlain(text) { return getNumberedItems(text).map((item, i) => `${i + 1}. ${item.replace(/\*\*(.*?)\*\*/g, '$1')}`).join('\n\n'); }
+  function formatNumberedPlain(text) { return getNumberedItems(text).map((item, i) => `${i + 1}. ${item.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\s*\n+\s*/g, ' ')}`).join('\n\n'); }
   function formatNumberedHtml(text) { return getNumberedItems(text).map((item, i) => { const stripped = item.replace(/\*\*(.*?)\*\*/g, '$1'); return `<p><strong>${i + 1}.</strong> ${escapeHtml(stripped)}</p>`; }).join(''); }
   function fitTextareaToContent(el) { el.style.height = '0px'; el.style.height = `${el.scrollHeight}px`; }
   function fitModelTextareas() { ['review-explanation','review-action','review-notes'].forEach(id => fitTextareaToContent($(id))); }

@@ -1,7 +1,7 @@
 """
 api.py
 ======
-TrackMind AI — FastAPI backend.
+TrackMind — FastAPI backend.
 
 Updated architecture:
   - /upload-spec   NEW: accepts a spec PDF, chunks it in memory, stores in session cache
@@ -24,16 +24,15 @@ Open: http://localhost:8000
 """
 
 import os
-import io
 import uuid
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="TrackMind AI", version="2.0.0")
+app = FastAPI(title="TrackMind", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,20 +50,8 @@ _SESSION_SPECS: dict[str, dict] = {}
 
 # ── Lazy-load heavy modules once ──────────────────────────────────────────────
 
-_retrieval = None
 _reasoning = None
 _audit     = None
-
-
-def get_retrieval():
-    global _retrieval
-    if _retrieval is None:
-        from retrieval import (
-            retrieve_regulatory, retrieve_with_session_spec,
-            format_context_for_llm, COLLECTIONS
-        )
-        _retrieval = (retrieve_regulatory, retrieve_with_session_spec, format_context_for_llm, COLLECTIONS)
-    return _retrieval
 
 
 def get_reasoning():
@@ -225,7 +212,6 @@ def analyse(req: AnalyseRequest):
     Otherwise runs regulatory-only (TSI + NNTR) and notes spec is missing.
     """
     try:
-        _, _, format_context_for_llm, _ = get_retrieval()
         reason, confidence_gate = get_reasoning()
 
         # Resolve session spec
