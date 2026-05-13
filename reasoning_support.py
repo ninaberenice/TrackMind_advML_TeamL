@@ -485,21 +485,47 @@ def _align_retrieval_to_verdict(
     return aligned
 
 
-def _canonical_citations_from_retrieval(retrieval: dict) -> list[str]:
+def _canonical_citations_from_retrieval(
+    retrieval: dict,
+    explanation_text: str = "",
+) -> list[str]:
     labels = {
         "tsi": "LOC&PAS TSI",
         "nntr": "Arrêté du 19 mars 2012",
         "spec": "Uploaded specification",
     }
     citations = []
+    seen_global = set()
+
+    def add(citation: str) -> None:
+        key = citation.lower()
+        if key in seen_global:
+            return
+        seen_global.add(key)
+        citations.append(citation)
+
     for key in ("tsi", "nntr", "spec"):
         seen = set()
         for chunk in retrieval.get(key, {}).get("chunks", []):
             article = str(chunk.get("article", "")).strip()
-            if not article or article.lower() == "unknown" or article.lower() in seen:
-                continue
-            seen.add(article.lower())
-            citations.append(f"{labels[key]} {article}")
+            if article and article.lower() != "unknown" and article.lower() not in seen:
+                seen.add(article.lower())
+                add(f"{labels[key]} {article}")
+
+    spec_context = " ".join(
+        " ".join([str(chunk.get("article", "")), str(chunk.get("text", ""))])
+        for chunk in retrieval.get("spec", {}).get("chunks", [])
+    )
+    if (
+        re.search(r"\bNF\s*F\s*31[-\s]?054\b", spec_context, flags=re.IGNORECASE)
+        and re.search(r"\bNF\s*F\s*31[-\s]?054\b", explanation_text or "", flags=re.IGNORECASE)
+    ):
+        add("Uploaded specification NF F31-054 (ref. French RFN)")
+    if (
+        re.search(r"\bEN\s*14752\b", spec_context, flags=re.IGNORECASE)
+        and re.search(r"\bEN\s*14752\b", explanation_text or "", flags=re.IGNORECASE)
+    ):
+        add("Uploaded specification EN 14752 (ref. TSI)")
     return citations
 
 

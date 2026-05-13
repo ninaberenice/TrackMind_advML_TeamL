@@ -386,9 +386,12 @@
     if (/\[spec-\d+\]/i.test(citation)) return 'spec';
     if (/\[nntr-\d+\]/i.test(citation)) return 'nntr';
     if (/\[tsi-\d+\]/i.test(citation)) return 'tsi';
+    if (c.includes('uploaded specification') || c.includes('spec')) return 'spec';
+    if (c.includes('nf f31')) return 'nntr';
+    if (c.includes('en 14752')) return 'tsi';
     if (c.includes('tsi') || c.includes('loc&pas') || c.includes('loc pas') || c.includes('1302/2014')) return 'tsi';
     if (c.includes('arrêté') || c.includes('arrete') || c.includes('article') || c.includes('nntr') || c.includes('national rule') || c.includes('french') || c.includes('rfn')) return 'nntr';
-    if (c.includes('iberrail') || c.includes('ib-emu') || c.includes('spec') || c.includes('technical specification')) return 'spec';
+    if (c.includes('iberrail') || c.includes('ib-emu') || c.includes('technical specification')) return 'spec';
     return 'spec';
   }
 
@@ -453,7 +456,7 @@
     function sectionLabelText(lbl, bodyText) { const lines = doc.splitTextToSize(clean(bodyText) || '-', CW - 12); ensure(10 + lines.length * LH + 14); drawSectionLabel(lbl); st(9, 'normal', C.text); doc.text(lines, SECTION_X, y); y += lines.length * LH + SECTION_END_GAP; }
     function sectionNumberedList(lbl, items) { const parsed = items.map(item => doc.splitTextToSize(clean(item).replace(/\s+/g, ' '), CW - 42)); ensure(10 + parsed.reduce((s, l) => s + l.length * BODY_LH + 6, 0) + 14); drawSectionLabel(lbl); parsed.forEach((lines, idx) => { ensure(lines.length * BODY_LH + 8); st(9, 'bold', C.navy); doc.text(`${idx + 1}.`, SECTION_X, y); st(9, 'normal', C.text); doc.text(lines, SECTION_X + 18, y); y += lines.length * BODY_LH + (idx === parsed.length - 1 ? SECTION_END_GAP : ITEM_GAP); }); }
     function parseNumbered(txt) { const s = clean(txt || ''), parts = [...s.matchAll(/(?:^|\n)\s*\d+\.\s*([\s\S]*?)(?=\n\s*\d+\.|$)/g)].map(m => m[1].trim()).filter(Boolean); return parts.length ? parts : s ? [s] : ['-']; }
-    function classifyCit(cit) { const lc = cit.toLowerCase(); if (lc.includes('iberrail') || lc.includes('ib-emu') || lc.includes('ts-004') || lc.includes('spec')) return 'SPEC'; if (lc.includes('tsi') || lc.includes('en 14752') || lc.includes('loc&pas') || lc.includes('1302/2014')) return 'TSI'; if (lc.includes('arr') || lc.includes('nf f31') || lc.includes('rfn') || lc.includes('national rule')) return 'NNTR'; return 'NNTR'; }
+    function classifyCit(cit) { const lc = cit.toLowerCase(); if (lc.includes('uploaded specification') || lc.includes('spec')) return 'SPEC'; if (lc.includes('nf f31')) return 'NNTR'; if (lc.includes('en 14752')) return 'TSI'; if (lc.includes('tsi') || lc.includes('loc&pas') || lc.includes('1302/2014')) return 'TSI'; if (lc.includes('arr') || lc.includes('rfn') || lc.includes('national rule')) return 'NNTR'; if (lc.includes('iberrail') || lc.includes('ib-emu') || lc.includes('ts-004')) return 'SPEC'; return 'NNTR'; }
 
     const bannerH = 75, logoImg = await loadPdfImage('logo_images/trackmind_logo_white.png'), logoH = 20, logoY = 16, logoW = logoImg ? logoH * (logoImg.naturalWidth / logoImg.naturalHeight) : 0, titleX = logoImg ? M + logoW + 8 : M;
     doc.setFillColor(...C.navy); doc.rect(0, 0, pageW, bannerH, 'F');

@@ -201,6 +201,23 @@ def run_benchmark(
     if verbose:
         print("\n=== METRIC 3: ANSWER CONCORDANCE (Green-tier) ===\n")
 
+    # Load SpecDoc for reasoning metrics
+    from trackmind_chunker import chunk_generic_from_bytes
+    from retrieval import embed
+
+    spec_chunks = None
+    try:
+        with open("docs/SpecDoc.pdf", "rb") as f:
+            pdf_bytes = f.read()
+        spec_chunks = chunk_generic_from_bytes(pdf_bytes, doc_type="SPEC", source_name="SpecDoc.pdf")
+        for chunk in spec_chunks:
+            chunk["_embedding"] = embed(chunk["text"])
+        if verbose:
+            print(f"  Loaded SpecDoc: {len(spec_chunks)} chunks\n")
+    except FileNotFoundError:
+        if verbose:
+            print("  WARNING: docs/SpecDoc.pdf not found — reasoning metrics will use no spec\n")
+
     query_results = []
     concordance_n = concordance_correct = 0
     high_conf_n = high_conf_correct = 0
@@ -209,7 +226,7 @@ def run_benchmark(
         if verbose:
             print(f"  Query: {query[:70]}...")
 
-        response, _ = reason(query, n_chunks=n_chunks, mock=mock)
+        response, _ = reason(query, n_chunks=n_chunks, mock=mock, session_spec_chunks=spec_chunks)
 
         # Verdict match (case-insensitive, allow partial match)
         verdict_match = exp_verdict.upper() in response.verdict.upper()

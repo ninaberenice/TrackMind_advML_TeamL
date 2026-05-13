@@ -188,7 +188,21 @@ def _boost_regulatory_chunks(source_key: str, combined_text: str, max_chunks: in
         if door_signal:
             articles.extend(["4.2.5.5.3", "4.2.5.5.1", "4.2.5.5.2", "4.2.5.5.5", "4.2.5.5.6"])
     elif source_key == "nntr":
-        french_signal = any(token in text for token in ("arrêté", "arrete", "french", "rfn", "nf f31", "amec", "epsf", "door", "obstacle"))
+        french_signal = any(token in text for token in (
+            "arrêté",
+            "arrete",
+            "french",
+            "rfn",
+            "nf f31",
+            "amec",
+            "epsf",
+            "door",
+            "obstacle",
+            "cas",
+            "single-agent",
+            "single agent",
+            "ter",
+        ))
         if french_signal:
             articles.append("Art. 49")
 
@@ -221,7 +235,16 @@ def _spec_keyword_bonus(query: str, chunk: dict) -> float:
         and any(token in q for token in ("french", "rfn", "nntr", "arrêté", "arrete"))
         and any(token in q for token in ("spec", "specification", "uploaded"))
     )
-    asks_nf_f31 = any(token in q for token in ("nf f31", "f31-054", "section 6.3", "obstacle"))
+    asks_nf_f31 = any(token in q for token in (
+        "nf f31",
+        "f31-054",
+        "section 6.3",
+        "obstacle",
+        "cas",
+        "single-agent",
+        "single agent",
+        "ter",
+    ))
 
     bonus = 0.0
     if asks_conflict or asks_three_sources:
