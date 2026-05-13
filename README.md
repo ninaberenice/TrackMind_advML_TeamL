@@ -209,7 +209,13 @@ Full interactive API documentation: `http://localhost:8000/docs`
 
 ## Team
 
-Advanced Topics in Machine Learning — Group L - Nova SBE · 2026
+Advanced Topics in Machine Learning - Nova SBE · 2026
+Group L:
+- Afonso Joao (72008) 
+- Catarina Palma (56526) 
+- Filippo Deluchi (71064) 
+- Nina Wecera (72603)
+- Paul Specht (72765) 
 
 ---
 
