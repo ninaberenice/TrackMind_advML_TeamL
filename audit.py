@@ -11,7 +11,7 @@ Schema
 ------
   queries      — one row per incoming query
   responses    — one row per AI-generated draft linked to a query
-  decisions    — one row per assessor action (approve / reject / escalate)
+  decisions    — one row per assessor action (approve / reject)
 
 Usage (standalone):
     python audit.py --show         # print last 10 audit entries
@@ -145,13 +145,15 @@ def log_response(
 def log_decision(
     response_id: int,
     assessor_id: str,
-    decision: str,             # "APPROVED" / "REJECTED" / "ESCALATED"
+    decision: str,             # "APPROVED" / "REJECTED"
     notes: str = "",
     edited_response: str = "", # if assessor edited the draft before approving
 ) -> int:
     """
     Log an assessor decision. Returns decision row id.
     """
+    if decision == "ESCALATED":
+        decision = "REJECTED"
     init_db()
     ts = datetime.now(timezone.utc).isoformat()
     conn = _get_conn()
@@ -206,7 +208,7 @@ def get_recent_entries(n: int = 10) -> list[dict]:
                r.confidence_pct,
                r.citations,
                d.assessor_id,
-               d.decision,
+               CASE WHEN d.decision='ESCALATED' THEN 'REJECTED' ELSE d.decision END AS decision,
                d.notes,
                d.ts            AS decision_ts
            FROM queries q
@@ -247,8 +249,8 @@ def get_stats() -> dict:
     stats["total_responses"]  = conn.execute("SELECT COUNT(*) FROM responses").fetchone()[0]
     stats["total_approvals"]  = conn.execute(
         "SELECT COUNT(*) FROM decisions WHERE decision='APPROVED'").fetchone()[0]
-    stats["total_escalations"] = conn.execute(
-        "SELECT COUNT(*) FROM decisions WHERE decision='ESCALATED'").fetchone()[0]
+    stats["total_rejections"] = conn.execute(
+        "SELECT COUNT(*) FROM decisions WHERE decision IN ('REJECTED', 'ESCALATED')").fetchone()[0]
     stats["green_count"] = conn.execute(
         "SELECT COUNT(*) FROM responses WHERE confidence_tier='GREEN'").fetchone()[0]
     stats["amber_count"] = conn.execute(

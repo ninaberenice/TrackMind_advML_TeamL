@@ -58,13 +58,13 @@
       <div class="step-head"><div class="step-num" id="step2-num">2</div><div><h2 class="step-title">Ask your compliance question</h2><p class="step-desc">Press <kbd class="kbd-hint">Enter</kbd> to analyse.</p></div></div>
       <textarea id="query" class="query-box" placeholder="Ask in any language about any TSI requirement, French RFN rule, or conflict between them."></textarea>
       <div class="query-controls">
-        <div class="examples-row"><span class="lab">Examples:</span><button class="chip" data-q="Does the uploaded spec's door obstacle detection satisfy French RFN requirements?">Door obstacle test under French RFN</button><button class="chip" data-q="What CAS single-agent operation requirements does the uploaded spec need for French TER services?">CAS door operation on French TER</button></div>
+        <div class="examples-row"><span class="lab">Examples:</span><button class="chip" data-q="Does the door obstacle detection in the uploaded spec satisfy French RFN and TSI requirements?">Door obstacle detection under French RFN and TSI</button><button class="chip" data-q="Does the passenger alarm system described in the technical specification satisfy the LOC&PAS TSI requirements">TSI passenger alarm requirements</button></div>
         <div class="step-actions"><button class="btn btn-outline" id="clear-btn">Clear</button><button class="btn btn-primary" id="analyse-btn" disabled>Analyse <svg><use href="#i-sparkles"/></svg></button></div>
       </div>
     </section>
 
     <section class="step" id="step-3">
-      <div class="step-head results-step-head"><div class="step-num" id="step3-num">3</div><div class="step-copy"><h2 class="step-title">Results</h2><p class="step-desc">Document context · Verdict · Engineer review.</p></div><div class="results-head-actions"><span id="analysis-time-slot"></span></div></div>
+      <div class="step-head results-step-head"><div class="step-num" id="step3-num">3</div><div class="step-copy"><h2 class="step-title">Results</h2><p class="step-desc">Document context · Verdict · Engineer review</p></div><div class="results-head-actions"><span id="analysis-time-slot"></span></div></div>
       <div class="results-loading" id="results-loading"><div class="spinner"></div><span id="loading-msg">Retrieving across TSI, French RFN rules and your spec doc…</span></div>
       <div class="empty-state" id="results-empty"><svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Run an analysis to see the results.</div>
 
@@ -172,7 +172,7 @@
   })();
 
   let MOCK_MODE = false, API_AVAILABLE = false, lastVerdict = null, lastQuery = '', latestRecordUrl = null, latestRecordName = '', editingHistoryQuery = null, sessionId = '';
-  const ASSESSOR_ID = 'NoBo-Assessor-001', sessionHistory = {}, sessionStats = { approved: 0, rejected: 0, escalated: 0, pending: 0 }, $ = id => document.getElementById(id);
+  const ASSESSOR_ID = 'NoBo-Assessor-001', sessionHistory = {}, sessionStats = { approved: 0, rejected: 0, pending: 0 }, $ = id => document.getElementById(id);
   function setStatus(state) {
     const live = $('btn-live'), mock = $('btn-mock');
     if (!live || !mock) return;
@@ -194,7 +194,15 @@
     const retrieval = raw.retrieval || {};
     const mapSource = (key, fallbackLang) => {
       const src = retrieval[key] || {}, lang = (src.lang || fallbackLang || 'EN').toUpperCase();
-      return (src.chunks || []).map((c, i) => ({ source: key, src: c.article || `${key.toUpperCase()}-${i + 1}`, lang, distance: typeof c.distance === 'number' ? c.distance : null, score: typeof c.distance === 'number' ? 1 - c.distance : null, text: c.text || '' }));
+      const refCounts = {};
+      (src.chunks || []).forEach(c => { const ref = c.article || ''; if (ref) refCounts[ref] = (refCounts[ref] || 0) + 1; });
+      const refSeen = {};
+      return (src.chunks || []).map((c, i) => {
+        const ref = c.article || `${key.toUpperCase()}-${i + 1}`;
+        refSeen[ref] = (refSeen[ref] || 0) + 1;
+        const displayRef = refCounts[ref] > 1 ? `${ref} #${refSeen[ref]}` : ref;
+        return { source: key, src: displayRef, article: ref, lang, distance: typeof c.distance === 'number' ? c.distance : null, score: typeof c.distance === 'number' ? 1 - c.distance : null, text: c.text || '' };
+      });
     };
     const confidencePct = Number.isFinite(Number(raw.confidence_pct)) ? Number(raw.confidence_pct) : 0, tier = (raw.confidence_tier || 'AMBER').toUpperCase();
     return { query, verdict: raw.verdict || 'INSUFFICIENT DATA', explanation: raw.explanation || '', recommended_action: raw.recommended_action || '', action: raw.recommended_action || '', confidence_tier: tier, tier: tier.toLowerCase(), confidence_pct: confidencePct, confidence: confidencePct / 100, confidence_reason: raw.confidence_reason || '', citations: Array.isArray(raw.citations) ? raw.citations : [], raw_response: raw.raw_response || '', allow_draft: typeof raw.allow_draft === 'boolean' ? raw.allow_draft : tier !== 'RED', gate_message: raw.gate_message || '', retrieval, chunksBySource: { tsi: mapSource('tsi', 'EN'), nntr: mapSource('nntr', 'FR'), spec: mapSource('spec', 'EN') }, tsi_top: raw.tsi_top || '', nntr_top: raw.nntr_top || '', spec_top: raw.spec_top || '', raw };
@@ -235,7 +243,6 @@
   function decisionStyle(decision) {
     if (decision === 'APPROVED') return { dot: 'green', badge: 'color:#166534;background:rgba(76,175,59,.12);border:1px solid rgba(76,175,59,.28);' };
     if (decision === 'REJECTED') return { dot: 'red', badge: 'color:#991b1b;background:rgba(224,71,62,.08);border:1px solid rgba(224,71,62,.24);' };
-    if (decision === 'ESCALATED') return { dot: 'escalated', badge: 'color:#7f1d1d;background:var(--escalated-soft);border:1px solid var(--escalated-border);' };
     return { dot: 'amber', badge: 'color:#92400e;background:rgba(245,165,36,.14);border:1px solid rgba(245,165,36,.34);' };
   }
 
@@ -296,7 +303,7 @@
       $('uploaded').classList.add('active');
       dz.style.display = 'none';
       $('step1-num').classList.add('done');
-      toast(`Spec loaded - ${data.chunk_count} chunks`, 'success');
+      toast(`Spec loaded`, 'success');
     } catch (e) {
       $('file-size').textContent = '';
       toast('Upload failed: ' + e.message, 'error');
@@ -325,8 +332,7 @@
     ['tsi','nntr','spec'].forEach(key => {
       const el = $('chunks-' + key + '-inner'); el.innerHTML = '';
       const chunks = data.chunksBySource?.[key] || [], sourceInfo = data.retrieval?.[key] || {};
-      if (sourceInfo.empty) { el.innerHTML = '<div style="font-size:12px;color:var(--muted-foreground);padding:4px 0">Collection empty — run ingestion first.</div>'; return; }
-      if (!chunks.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted-foreground);padding:4px 0">No chunks retrieved.</div>'; return; }
+      if (sourceInfo.empty || !chunks.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted-foreground);padding:4px 0">No relevant passages were found.</div>'; return; }
 
       const makeChunk = (c, i) => {
         const det = document.createElement('details'); det.className = `chunk ${key}`; det.open = i === 0;
@@ -377,9 +383,15 @@
 
   function classifyCitation(citation) {
     const c = String(citation).toLowerCase();
+    if (/\[spec-\d+\]/i.test(citation)) return 'spec';
+    if (/\[nntr-\d+\]/i.test(citation)) return 'nntr';
+    if (/\[tsi-\d+\]/i.test(citation)) return 'tsi';
+    if (c.includes('uploaded specification') || c.includes('spec')) return 'spec';
+    if (c.includes('nf f31')) return 'nntr';
+    if (c.includes('en 14752')) return 'tsi';
     if (c.includes('tsi') || c.includes('loc&pas') || c.includes('loc pas') || c.includes('1302/2014')) return 'tsi';
     if (c.includes('arrêté') || c.includes('arrete') || c.includes('article') || c.includes('nntr') || c.includes('national rule') || c.includes('french') || c.includes('rfn')) return 'nntr';
-    if (c.includes('iberrail') || c.includes('ib-emu') || c.includes('spec') || c.includes('technical specification')) return 'spec';
+    if (c.includes('iberrail') || c.includes('ib-emu') || c.includes('technical specification')) return 'spec';
     return 'spec';
   }
 
@@ -388,7 +400,7 @@
     if (!items.length) { group.style.display = 'none'; return; }
     group.style.display = 'block';
     const citationPrefixes = { tsi: '[TSI]', nntr: '[NNTR]', spec: '[SPEC]' };
-    items.forEach(citation => { const chip = document.createElement('span'); chip.className = `citation-chip ${key}`; chip.textContent = `${citationPrefixes[key]} ${citation}`; container.appendChild(chip); });
+    items.forEach(citation => { const chip = document.createElement('span'); chip.className = `citation-chip ${key}`; chip.textContent = `${citationPrefixes[key]} ${String(citation).replace(/^\[(TSI|NNTR|SPEC)\]\s*/i, '')}`; container.appendChild(chip); });
   }
 
   $('approve-btn').addEventListener('click', () => decide('APPROVED'));
@@ -400,9 +412,9 @@
   async function decide(decision) {
     if (!lastVerdict) { toast('Run an analysis first.', 'error'); return; }
     if (lastVerdict._review && !editingHistoryQuery) { toast('This analysis has already been reviewed.', 'error'); return; }
-    if (decision === 'APPROVED' && !lastVerdict.allow_draft) { toast('RED tier — no draft to approve. Escalate instead.', 'error'); return; }
+    if (decision === 'APPROVED' && !lastVerdict.allow_draft) { toast('RED tier — no draft to approve. Reject instead.', 'error'); return; }
 
-    const finalDecision = !lastVerdict.allow_draft ? 'ESCALATED' : decision, assessorNotes = $('review-notes').value.trim(), notes = assessorNotes || (finalDecision === 'ESCALATED' ? 'RED tier — insufficient evidence to draft' : '');
+    const finalDecision = !lastVerdict.allow_draft ? 'REJECTED' : decision, assessorNotes = $('review-notes').value.trim(), notes = assessorNotes || (!lastVerdict.allow_draft ? 'RED tier — insufficient evidence to draft' : '');
 
     try {
       const ids = await postDecision(finalDecision, notes, $('review-explanation').value, $('review-action').value);
@@ -417,8 +429,8 @@
       editingHistoryQuery = null; $('approve-btn').disabled = true; $('reject-btn').disabled = true;
       loadAuditStats(); loadAuditLog(); await generateComplianceRecord(finalDecision, ids);
 
-      const label = finalDecision === 'APPROVED' ? 'Verdict approved & logged' : finalDecision === 'REJECTED' ? 'Verdict rejected & logged' : 'Escalation logged';
-      toast(label, ['REJECTED','ESCALATED'].includes(finalDecision) ? 'error' : 'success');
+      const label = finalDecision === 'APPROVED' ? 'Verdict approved & logged' : 'Verdict rejected & logged';
+      toast(label, finalDecision === 'REJECTED' ? 'error' : 'success');
     } catch (e) { toast(e.message || 'Could not log decision.', 'error'); }
   }
 
@@ -430,7 +442,7 @@
     const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight(), M = 42, CW = pageW - M * 2, FOOTER_H = 28, LH = 16, BODY_LH = 13, SECTION_X = M + 12, ITEM_GAP = 4, SECTION_END_GAP = 8;
     let y = 0; doc.setLineHeightFactor(1.42);
 
-    const C = { navy:[14,37,71], tsi:[63,127,189], green:[76,175,59], red:[192,57,43], amber:[217,119,6], escalated: [185, 28, 28],text:[26,26,46], muted:[107,114,128], rule:[229,231,235], soft:[249,250,251], white:[255,255,255], navylt:[148,175,201] };
+    const C = { navy:[14,37,71], tsi:[63,127,189], green:[76,175,59], red:[192,57,43], amber:[217,119,6], text:[26,26,46], muted:[107,114,128], rule:[229,231,235], soft:[249,250,251], white:[255,255,255], navylt:[148,175,201] };
     const clean = v => String(v || '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/[""]/g, '"').replace(/['']/g, "'").replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/[–—]/g, '-').replace(/·/g, '-').replace(/\u00a0/g, ' ').trim();
     const st = (size, style, color) => { doc.setFont('helvetica', style || 'normal'); doc.setFontSize(size); doc.setTextColor(...(color || C.text)); };
     const loadPdfImage = src => new Promise(resolve => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = src; });
@@ -444,7 +456,7 @@
     function sectionLabelText(lbl, bodyText) { const lines = doc.splitTextToSize(clean(bodyText) || '-', CW - 12); ensure(10 + lines.length * LH + 14); drawSectionLabel(lbl); st(9, 'normal', C.text); doc.text(lines, SECTION_X, y); y += lines.length * LH + SECTION_END_GAP; }
     function sectionNumberedList(lbl, items) { const parsed = items.map(item => doc.splitTextToSize(clean(item).replace(/\s+/g, ' '), CW - 42)); ensure(10 + parsed.reduce((s, l) => s + l.length * BODY_LH + 6, 0) + 14); drawSectionLabel(lbl); parsed.forEach((lines, idx) => { ensure(lines.length * BODY_LH + 8); st(9, 'bold', C.navy); doc.text(`${idx + 1}.`, SECTION_X, y); st(9, 'normal', C.text); doc.text(lines, SECTION_X + 18, y); y += lines.length * BODY_LH + (idx === parsed.length - 1 ? SECTION_END_GAP : ITEM_GAP); }); }
     function parseNumbered(txt) { const s = clean(txt || ''), parts = [...s.matchAll(/(?:^|\n)\s*\d+\.\s*([\s\S]*?)(?=\n\s*\d+\.|$)/g)].map(m => m[1].trim()).filter(Boolean); return parts.length ? parts : s ? [s] : ['-']; }
-    function classifyCit(cit) { const lc = cit.toLowerCase(); if (lc.includes('iberrail') || lc.includes('ib-emu') || lc.includes('ts-004') || lc.includes('spec')) return 'SPEC'; if (lc.includes('tsi') || lc.includes('en 14752') || lc.includes('loc&pas') || lc.includes('1302/2014')) return 'TSI'; if (lc.includes('arr') || lc.includes('nf f31') || lc.includes('rfn') || lc.includes('national rule')) return 'NNTR'; return 'NNTR'; }
+    function classifyCit(cit) { const lc = cit.toLowerCase(); if (lc.includes('uploaded specification') || lc.includes('spec')) return 'SPEC'; if (lc.includes('nf f31')) return 'NNTR'; if (lc.includes('en 14752')) return 'TSI'; if (lc.includes('tsi') || lc.includes('loc&pas') || lc.includes('1302/2014')) return 'TSI'; if (lc.includes('arr') || lc.includes('rfn') || lc.includes('national rule')) return 'NNTR'; if (lc.includes('iberrail') || lc.includes('ib-emu') || lc.includes('ts-004')) return 'SPEC'; return 'NNTR'; }
 
     const bannerH = 75, logoImg = await loadPdfImage('logo_images/trackmind_logo_white.png'), logoH = 20, logoY = 16, logoW = logoImg ? logoH * (logoImg.naturalWidth / logoImg.naturalHeight) : 0, titleX = logoImg ? M + logoW + 8 : M;
     doc.setFillColor(...C.navy); doc.rect(0, 0, pageW, bannerH, 'F');
@@ -452,7 +464,7 @@
     st(20, 'bold', C.white); doc.text('TrackMind', titleX, 34);
     st(8, 'normal', C.navylt); doc.text('Human-reviewed railway compliance audit record', M, 52); y = bannerH + 22;
 
-    const third = CW / 3, reviewColor = safeDecision === 'REJECTED' ? C.red : safeDecision === 'ESCALATED' ? C.escalated : C.green, cellPad = 8;
+    const third = CW / 3, reviewColor = safeDecision === 'REJECTED' ? C.red : C.green, cellPad = 8;
     function drawSummaryLabel(label, x, rowY) { st(8, 'bold', C.text); doc.text(label.toUpperCase(), x, rowY); }
     function drawSummaryText(value, x, rowY) { st(9, 'normal', C.text); doc.text(clean(value), x, rowY + 13); }
     function truncatePdfText(value, maxWidth) {
@@ -556,7 +568,7 @@
     return matches.length ? matches.map(match => match[1].trim()).filter(Boolean) : value.split(/\n{2,}/).map(item => item.trim()).filter(Boolean);
   }
 
-  function formatNumberedPlain(text) { return getNumberedItems(text).map((item, i) => `${i + 1}. ${item.replace(/\*\*(.*?)\*\*/g, '$1')}`).join('\n\n'); }
+  function formatNumberedPlain(text) { return getNumberedItems(text).map((item, i) => `${i + 1}. ${item.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\s*\n+\s*/g, ' ')}`).join('\n\n'); }
   function formatNumberedHtml(text) { return getNumberedItems(text).map((item, i) => { const stripped = item.replace(/\*\*(.*?)\*\*/g, '$1'); return `<p><strong>${i + 1}.</strong> ${escapeHtml(stripped)}</p>`; }).join(''); }
   function fitTextareaToContent(el) { el.style.height = '0px'; el.style.height = `${el.scrollHeight}px`; }
   function fitModelTextareas() { ['review-explanation','review-action','review-notes'].forEach(id => fitTextareaToContent($(id))); }
@@ -596,9 +608,9 @@
     const review = d._review, decisionEl = $('hm-decision');
     if (review) {
       decisionEl.style.display = 'inline-flex'; decisionEl.textContent = review.decision;
-      decisionEl.style.color = review.decision === 'APPROVED' ? '#166534' : review.decision === 'ESCALATED' ? '#7f1d1d' : '#991b1b';
-      decisionEl.style.background = review.decision === 'APPROVED' ? 'rgba(76,175,59,.1)' : review.decision === 'ESCALATED' ? 'var(--escalated-soft)' : 'rgba(224,71,62,.08)';
-      decisionEl.style.borderColor = review.decision === 'APPROVED' ? 'rgba(76,175,59,.3)' : review.decision === 'ESCALATED' ? 'var(--escalated-border)' : 'rgba(224,71,62,.3)';
+      decisionEl.style.color = review.decision === 'APPROVED' ? '#166534' : '#991b1b';
+      decisionEl.style.background = review.decision === 'APPROVED' ? 'rgba(76,175,59,.1)' : 'rgba(224,71,62,.08)';
+      decisionEl.style.borderColor = review.decision === 'APPROVED' ? 'rgba(76,175,59,.3)' : 'rgba(224,71,62,.3)';
       $('hm-explanation').innerHTML = formatNumberedHtml(review.explanation); $('hm-action').innerHTML = formatNumberedHtml(review.action); $('hm-notes-block').style.display = 'block'; $('hm-notes').textContent = review.notes || 'No engineer notes provided.';
     } else {
       decisionEl.style.display = 'inline-flex'; decisionEl.textContent = 'PENDING'; decisionEl.style.color = '#92400e'; decisionEl.style.background = 'rgba(245,165,36,.14)'; decisionEl.style.borderColor = 'rgba(245,165,36,.34)';

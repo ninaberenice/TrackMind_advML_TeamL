@@ -1,7 +1,7 @@
 """
 api.py
 ======
-TrackMind AI — FastAPI backend.
+TrackMind — FastAPI backend.
 
 Updated architecture:
   - /upload-spec   NEW: accepts a spec PDF, chunks it in memory, stores in session cache
@@ -13,9 +13,6 @@ The spec PDF is never written to ChromaDB. It lives only in the server's
 in-memory session store (_SESSION_SPECS dict, keyed by session_id).
 This keeps manufacturer specs off the persistent vector DB.
 
-Run (first time only):
-    pip install fastapi uvicorn python-multipart
-
 Run:
     export ANTHROPIC_API_KEY=<your-api-key>
     uvicorn api:app --reload --port 8000
@@ -24,16 +21,16 @@ Open: http://localhost:8000
 """
 
 import os
-import io
 import uuid
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from types import SimpleNamespace
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="TrackMind AI", version="2.0.0")
+app = FastAPI(title="TrackMind", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,20 +48,8 @@ _SESSION_SPECS: dict[str, dict] = {}
 
 # ── Lazy-load heavy modules once ──────────────────────────────────────────────
 
-_retrieval = None
 _reasoning = None
 _audit     = None
-
-
-def get_retrieval():
-    global _retrieval
-    if _retrieval is None:
-        from retrieval import (
-            retrieve_regulatory, retrieve_with_session_spec,
-            format_context_for_llm, COLLECTIONS
-        )
-        _retrieval = (retrieve_regulatory, retrieve_with_session_spec, format_context_for_llm, COLLECTIONS)
-    return _retrieval
 
 
 def get_reasoning():
@@ -225,7 +210,6 @@ def analyse(req: AnalyseRequest):
     Otherwise runs regulatory-only (TSI + NNTR) and notes spec is missing.
     """
     try:
-        _, _, format_context_for_llm, _ = get_retrieval()
         reason, confidence_gate = get_reasoning()
 
         # Resolve session spec
@@ -293,23 +277,23 @@ def analyse(req: AnalyseRequest):
 
 @app.post("/decide")
 def decide(req: DecisionRequest):
-    """Log an assessor decision (approve / reject / escalate)."""
+    """Log an assessor decision (approve / reject)."""
     try:
         log_full_interaction, _, _ = get_audit()
 
-        class _Resp:
-            pass
+        decision = "REJECTED" if req.decision == "ESCALATED" else req.decision
 
-        resp = _Resp()
-        resp.query              = req.query_text
-        resp.verdict            = req.verdict
-        resp.explanation        = req.edited_explanation or req.explanation
-        resp.recommended_action = req.edited_action or req.recommended_action
-        resp.confidence_tier    = req.confidence_tier
-        resp.confidence_pct     = req.confidence_pct
-        resp.confidence_reason  = req.confidence_reason
-        resp.citations          = req.citations
-        resp.raw_response       = req.raw_response
+        resp = SimpleNamespace(
+            query=req.query_text,
+            verdict=req.verdict,
+            explanation=req.edited_explanation or req.explanation,
+            recommended_action=req.edited_action or req.recommended_action,
+            confidence_tier=req.confidence_tier,
+            confidence_pct=req.confidence_pct,
+            confidence_reason=req.confidence_reason,
+            citations=req.citations,
+            raw_response=req.raw_response,
+        )
 
         edited = ""
         if req.edited_explanation or req.edited_action:
@@ -322,7 +306,7 @@ def decide(req: DecisionRequest):
             query_text=req.query_text,
             response=resp,
             assessor_id=req.assessor_id,
-            decision=req.decision,
+            decision=decision,
             notes=req.notes,
             edited_response=edited,
             tsi_top=req.tsi_top,
@@ -357,7 +341,7 @@ def audit_stats():
 
 @app.get("/")
 def root():
-    return FileResponse("demo.html")
+    return FileResponse("index.html")
 
 @app.get("/{filepath:path}")
 def static_file(filepath: str):

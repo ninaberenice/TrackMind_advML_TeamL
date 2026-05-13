@@ -472,4 +472,9 @@ details[open] .chevron { transform: rotate(90deg); }
   cursor: pointer;
   transition: .15s;
 }
-.btn-view-full:hover { background: rgba(111,168,220,.22); }
+.chunk.tsi .btn-view-full { color: var(--tsi); border-color: var(--tsi-border); background: var(--tsi-soft); }
+.chunk.tsi .btn-view-full:hover { background: rgba(111,168,220,.22); }
+.chunk.nntr .btn-view-full { color: #92400e; border-color: rgba(245,165,36,.32); background: rgba(245,165,36,.10); }
+.chunk.nntr .btn-view-full:hover { background: rgba(245,165,36,.18); }
+.chunk.spec .btn-view-full { color: #166534; border-color: rgba(76,175,59,.32); background: rgba(76,175,59,.10); }
+.chunk.spec .btn-view-full:hover { background: rgba(76,175,59,.18); }

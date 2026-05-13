@@ -1,0 +1,232 @@
+{
+  "tsi_precision": 0.8888888888888888,
+  "nntr_precision": 0.8571428571428571,
+  "tsi_target_pass": true,
+  "nntr_target_pass": true,
+  "cross_lingual_prec": 0.8,
+  "cross_lingual_pass": true,
+  "concordance_n": 5,
+  "concordance_correct": 5,
+  "concordance_rate": 1.0,
+  "concordance_pass": true,
+  "high_conf_n": 5,
+  "high_conf_correct": 5,
+  "calibration_rate": 1.0,
+  "calibration_pass": true,
+  "query_results": [
+    {
+      "query": "Does IberRail's door obstacle detection testing satisfy French RFN requirements under Arr\u00eat\u00e9 2012 Article 49?",
+      "expected_verdict": "CONFLICT DETECTED",
+      "actual_verdict": "CONFLICT DETECTED",
+      "verdict_match": true,
+      "expected_citations": [
+        "Art. 49",
+        "4.2.5.5",
+        "NF F31-054"
+      ],
+      "actual_citations": [
+        "Arr\u00eat\u00e9 du 19 mars 2012 Art. 49",
+        "Uploaded specification 1.2",
+        "Uploaded specification 4.2",
+        "Uploaded specification 4.2.3.3",
+        "Uploaded specification NF F31-054 (ref. French RFN)",
+        "Uploaded specification EN 14752 (ref. TSI)"
+      ],
+      "citations_found": [
+        "Art. 49",
+        "NF F31-054"
+      ],
+      "citations_missing": [
+        "4.2.5.5"
+      ],
+      "confidence_tier": "GREEN",
+      "confidence_pct": 92,
+      "is_green_tier": true,
+      "concordance_eligible": true,
+      "concordance_pass": true
+    },
+    {
+      "query": "What CAS single-agent operation requirements does the IB-EMU-450 need to satisfy for French TER services?",
+      "expected_verdict": "CONFLICT DETECTED",
+      "actual_verdict": "CONFLICT DETECTED",
+      "verdict_match": true,
+      "expected_citations": [
+        "Art. 49",
+        "NF F31-054"
+      ],
+      "actual_citations": [
+        "LOC&PAS TSI 4.2.3.1",
+        "LOC&PAS TSI 4.2.2.4",
+        "LOC&PAS TSI 7.3.2.16",
+        "Arr\u00eat\u00e9 du 19 mars 2012 Art. 49",
+        "Uploaded specification 1.2",
+        "Uploaded specification 4.3",
+        "Uploaded specification 4.3.2",
+        "Uploaded specification NF F31-054 (ref. French RFN)"
+      ],
+      "citations_found": [
+        "Art. 49",
+        "NF F31-054"
+      ],
+      "citations_missing": [],
+      "confidence_tier": "AMBER",
+      "confidence_pct": 85,
+      "is_green_tier": false,
+      "concordance_eligible": false,
+      "concordance_pass": null
+    },
+    {
+      "query": "Is IberRail's existing EN 14752 FAT sufficient for French RFN door authorisation?",
+      "expected_verdict": "CONFLICT DETECTED",
+      "actual_verdict": "CONFLICT DETECTED",
+      "verdict_match": true,
+      "expected_citations": [
+        "Art. 49",
+        "EN 14752",
+        "NF F31-054"
+      ],
+      "actual_citations": [
+        "Arr\u00eat\u00e9 du 19 mars 2012 Art. 49",
+        "Uploaded specification 1.2",
+        "Uploaded specification 4.2.3.3",
+        "Uploaded specification 4.3.2",
+        "Uploaded specification NF F31-054 (ref. French RFN)",
+        "Uploaded specification EN 14752 (ref. TSI)"
+      ],
+      "citations_found": [
+        "Art. 49",
+        "EN 14752",
+        "NF F31-054"
+      ],
+      "citations_missing": [],
+      "confidence_tier": "GREEN",
+      "confidence_pct": 92,
+      "is_green_tier": true,
+      "concordance_eligible": true,
+      "concordance_pass": true
+    },
+    {
+      "query": "Does the LOC&PAS TSI cover single-agent door operation requirements?",
+      "expected_verdict": "CONFLICT DETECTED",
+      "actual_verdict": "INSUFFICIENT DATA",
+      "verdict_match": false,
+      "expected_citations": [
+        "Art. 49",
+        "NF F31-054"
+      ],
+      "actual_citations": [
+        "LOC&PAS TSI 4.3"
+      ],
+      "citations_found": [],
+      "citations_missing": [
+        "Art. 49",
+        "NF F31-054"
+      ],
+      "confidence_tier": "RED",
+      "confidence_pct": 69,
+      "is_green_tier": false,
+      "concordance_eligible": false,
+      "concordance_pass": null
+    },
+    {
+      "query": "What are the TSI requirements for exterior passenger access doors?",
+      "expected_verdict": "COMPLIANT",
+      "actual_verdict": "COMPLIANT",
+      "verdict_match": true,
+      "expected_citations": [
+        "4.2.5.5"
+      ],
+      "actual_citations": [
+        "LOC&PAS TSI 4.2.5.5.1",
+        "LOC&PAS TSI 4.3",
+        "LOC&PAS TSI 4.2.3.1",
+        "Uploaded specification 4.4",
+        "Uploaded specification 4.1",
+        "Uploaded specification EN 14752 (ref. TSI)"
+      ],
+      "citations_found": [
+        "4.2.5.5"
+      ],
+      "citations_missing": [],
+      "confidence_tier": "GREEN",
+      "confidence_pct": 92,
+      "is_green_tier": true,
+      "concordance_eligible": true,
+      "concordance_pass": true
+    },
+    {
+      "query": "What does Arr\u00eat\u00e9 2012 Article 49 require for door obstacle detection?",
+      "expected_verdict": "CONFLICT DETECTED",
+      "actual_verdict": "CONFLICT DETECTED",
+      "verdict_match": true,
+      "expected_citations": [
+        "Art. 49",
+        "NF F31-054"
+      ],
+      "actual_citations": [
+        "LOC&PAS TSI 4.2.3.1",
+        "Arr\u00eat\u00e9 du 19 mars 2012 Art. 49",
+        "Uploaded specification 4.0",
+        "Uploaded specification 4.3.2",
+        "Uploaded specification NF F31-054 (ref. French RFN)"
+      ],
+      "citations_found": [
+        "Art. 49",
+        "NF F31-054"
+      ],
+      "citations_missing": [],
+      "confidence_tier": "GREEN",
+      "confidence_pct": 90,
+      "is_green_tier": true,
+      "concordance_eligible": true,
+      "concordance_pass": true
+    },
+    {
+      "query": "What are the Portuguese national rules for door obstacle detection on the IP network?",
+      "expected_verdict": "INSUFFICIENT DATA",
+      "actual_verdict": "INSUFFICIENT DATA",
+      "verdict_match": true,
+      "expected_citations": [],
+      "actual_citations": [
+        "LOC&PAS TSI 4.2.5.5.3",
+        "Arr\u00eat\u00e9 du 19 mars 2012 Art. 49",
+        "Uploaded specification 1.2",
+        "Uploaded specification 4.2",
+        "Uploaded specification EN 14752 (ref. TSI)"
+      ],
+      "citations_found": [],
+      "citations_missing": [],
+      "confidence_tier": "RED",
+      "confidence_pct": 25,
+      "is_green_tier": false,
+      "concordance_eligible": false,
+      "concordance_pass": null
+    },
+    {
+      "query": "Quelles sont les exigences de l'Arr\u00eat\u00e9 2012 pour les portes d'acc\u00e8s voyageurs?",
+      "expected_verdict": "CONFLICT DETECTED",
+      "actual_verdict": "CONFLICT DETECTED",
+      "verdict_match": true,
+      "expected_citations": [
+        "Art. 49"
+      ],
+      "actual_citations": [
+        "LOC&PAS TSI 4.3",
+        "Arr\u00eat\u00e9 du 19 mars 2012 Art. 49",
+        "Uploaded specification 4.0",
+        "Uploaded specification 4.3",
+        "Uploaded specification 5.1",
+        "Uploaded specification NF F31-054 (ref. French RFN)"
+      ],
+      "citations_found": [
+        "Art. 49"
+      ],
+      "citations_missing": [],
+      "confidence_tier": "GREEN",
+      "confidence_pct": 90,
+      "is_green_tier": true,
+      "concordance_eligible": true,
+      "concordance_pass": true
+    }
+  ]
+}
